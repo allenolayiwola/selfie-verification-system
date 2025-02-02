@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
+import { Footer } from "@/components/footer";
 
 export function ProtectedRoute({
   path,
@@ -29,5 +30,10 @@ export function ProtectedRoute({
     );
   }
 
-  return <Component />
+  return (
+    <>
+      <Component />
+      <Footer />
+    </>
+  );
 }
