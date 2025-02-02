@@ -47,7 +47,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error('Server Error:', err); // Add error logging
   });
 
   if (app.get("env") === "development") {
@@ -56,9 +56,10 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Use Azure's port or fallback to 5000
-  const PORT = process.env.PORT || 5000;
-  server.listen(PORT, () => {
+  // Use Azure's port (8080) or fallback to 5000
+  const PORT = process.env.PORT || 8080;
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
     log(`serving on port ${PORT}`);
   });
 })();
