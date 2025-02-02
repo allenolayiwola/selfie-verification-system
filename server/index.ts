@@ -59,7 +59,7 @@ app.use((req, res, next) => {
 
     // Use Azure's port (8080) or fallback to 5000
     const PORT = process.env.PORT || 8080;
-    server.listen(PORT, '0.0.0.0', () => {
+    server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       log(`serving on port ${PORT}`);
     });
