@@ -6,6 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Enable trust proxy for Azure
+app.set('trust proxy', 1);
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -54,7 +57,7 @@ app.use((req, res, next) => {
   }
 
   // Use Azure's port or fallback to 5000
-  const PORT = Number(process.env.PORT) || 5000;
+  const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
     log(`serving on port ${PORT}`);
   });
