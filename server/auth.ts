@@ -125,4 +125,8 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
+  
+  app.get("/healthz", (req, res) => {
+    res.sendStatus(200);
+  });
 }

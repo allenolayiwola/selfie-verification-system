@@ -40,26 +40,31 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  try {
+    const server = registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    console.error('Server Error:', err); // Add error logging
-  });
+      res.status(status).json({ message });
+      console.error('Server Error:', err); // Add error logging
+    });
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // Use Azure's port (8080) or fallback to 5000
+    const PORT = process.env.PORT || 8080;
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on port ${PORT}`);
+      log(`serving on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Application startup error:', error);
+    process.exit(1); // Exit on startup error
   }
-
-  // Use Azure's port (8080) or fallback to 5000
-  const PORT = process.env.PORT || 8080;
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-    log(`serving on port ${PORT}`);
-  });
 })();
