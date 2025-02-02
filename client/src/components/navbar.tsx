@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Shield, Camera, LogOut } from "lucide-react";
+import { Shield, Camera, LogOut, Users } from "lucide-react";
 
 export default function Navbar() {
   const { user, logoutMutation } = useAuth();
@@ -26,9 +26,14 @@ export default function Navbar() {
             <a className="text-sm font-medium hover:text-primary">New Verification</a>
           </Link>
           {user.role === "admin" && (
-            <Link href="/admin">
-              <a className="text-sm font-medium hover:text-primary">Admin Panel</a>
-            </Link>
+            <>
+              <Link href="/admin">
+                <a className="text-sm font-medium hover:text-primary">Admin Panel</a>
+              </Link>
+              <Link href="/users">
+                <a className="text-sm font-medium hover:text-primary">User Management</a>
+              </Link>
+            </>
           )}
         </nav>
 
@@ -59,12 +64,20 @@ export default function Navbar() {
             </a>
           </Link>
           {user.role === "admin" && (
-            <Link href="/admin">
-              <a className="flex flex-col items-center gap-1 text-xs font-medium">
-                <Shield className="h-5 w-5" />
-                Admin
-              </a>
-            </Link>
+            <>
+              <Link href="/admin">
+                <a className="flex flex-col items-center gap-1 text-xs font-medium">
+                  <Shield className="h-5 w-5" />
+                  Admin
+                </a>
+              </Link>
+              <Link href="/users">
+                <a className="flex flex-col items-center gap-1 text-xs font-medium">
+                  <Users className="h-5 w-5" />
+                  Users
+                </a>
+              </Link>
+            </>
           )}
         </nav>
       </div>
