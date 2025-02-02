@@ -2,6 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Set default NODE_ENV if not provided
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -48,23 +51,22 @@ app.use((req, res, next) => {
       const message = err.message || "Internal Server Error";
 
       res.status(status).json({ message });
-      console.error('Server Error:', err); // Add error logging
+      console.error('Server Error:', err);
     });
 
-    if (app.get("env") === "development") {
+    if (process.env.NODE_ENV === "development") {
       await setupVite(app, server);
     } else {
       serveStatic(app);
     }
 
-    // Use Azure's port (8080) or fallback to 5000
-    const PORT = process.env.PORT || 8080;
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    const PORT = parseInt(process.env.PORT || '8080');
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
       log(`serving on port ${PORT}`);
     });
   } catch (error) {
     console.error('Application startup error:', error);
-    process.exit(1); // Exit on startup error
+    process.exit(1);
   }
 })();
