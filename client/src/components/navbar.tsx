@@ -13,25 +13,25 @@ export default function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-primary" />
-          <Link href="/">
-            <a className="font-bold text-lg">ID Verification</a>
-          </Link>
+          <span className="font-bold text-lg">
+            <Link href="/">ID Verification</Link>
+          </span>
         </div>
 
         <nav className="hidden md:flex items-center gap-6">
           <Link href="/">
-            <a className="text-sm font-medium hover:text-primary">Dashboard</a>
+            <span className="text-sm font-medium hover:text-primary">Dashboard</span>
           </Link>
           <Link href="/verify">
-            <a className="text-sm font-medium hover:text-primary">New Verification</a>
+            <span className="text-sm font-medium hover:text-primary">New Verification</span>
           </Link>
           {user.role === "admin" && (
             <>
               <Link href="/admin">
-                <a className="text-sm font-medium hover:text-primary">Admin Panel</a>
+                <span className="text-sm font-medium hover:text-primary">Admin Panel</span>
               </Link>
               <Link href="/users">
-                <a className="text-sm font-medium hover:text-primary">User Management</a>
+                <span className="text-sm font-medium hover:text-primary">User Management</span>
               </Link>
             </>
           )}
@@ -52,30 +52,30 @@ export default function Navbar() {
       <div className="md:hidden border-t">
         <nav className="container mx-auto px-4 py-2 flex justify-around">
           <Link href="/">
-            <a className="flex flex-col items-center gap-1 text-xs font-medium">
+            <span className="flex flex-col items-center gap-1 text-xs font-medium">
               <Shield className="h-5 w-5" />
               Dashboard
-            </a>
+            </span>
           </Link>
           <Link href="/verify">
-            <a className="flex flex-col items-center gap-1 text-xs font-medium">
+            <span className="flex flex-col items-center gap-1 text-xs font-medium">
               <Camera className="h-5 w-5" />
               Verify
-            </a>
+            </span>
           </Link>
           {user.role === "admin" && (
             <>
               <Link href="/admin">
-                <a className="flex flex-col items-center gap-1 text-xs font-medium">
+                <span className="flex flex-col items-center gap-1 text-xs font-medium">
                   <Shield className="h-5 w-5" />
                   Admin
-                </a>
+                </span>
               </Link>
               <Link href="/users">
-                <a className="flex flex-col items-center gap-1 text-xs font-medium">
+                <span className="flex flex-col items-center gap-1 text-xs font-medium">
                   <Users className="h-5 w-5" />
                   Users
-                </a>
+                </span>
               </Link>
             </>
           )}

@@ -6,15 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { Shield } from "lucide-react";
+import { useEffect } from "react";
 
 export default function AuthPage() {
   const { user, loginMutation } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
+
+  if (user) return null;
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
@@ -50,11 +54,11 @@ function LoginForm() {
     <form onSubmit={handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
       <div>
         <Label htmlFor="username">Username</Label>
-        <Input id="username" {...register("username")} required />
+        <Input id="username" defaultValue="" {...register("username")} required />
       </div>
       <div>
         <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" {...register("password")} required />
+        <Input id="password" type="password" defaultValue="" {...register("password")} required />
       </div>
       <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
         {loginMutation.isPending ? "Logging in..." : "Login"}
