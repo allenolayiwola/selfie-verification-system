@@ -25,7 +25,10 @@ import { queryClient } from "@/lib/queryClient";
 const userSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(6).optional(),
-  role: z.enum(["user", "admin"])
+  role: z.enum(["user", "admin"]),
+  fullName: z.string().min(2).optional(),
+  department: z.string().optional(),
+  email: z.string().email().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -35,6 +38,9 @@ interface UserEditorProps {
     id: number;
     username: string;
     role: "user" | "admin";
+    fullName?: string;
+    department?: string;
+    email?: string;
   };
 }
 
@@ -44,7 +50,10 @@ export function UserEditor({ user }: UserEditorProps) {
     resolver: zodResolver(userSchema),
     defaultValues: {
       username: user?.username || "",
-      role: user?.role || "user"
+      role: user?.role || "user",
+      fullName: user?.fullName || "",
+      department: user?.department || "",
+      email: user?.email || "",
     }
   });
 
@@ -140,6 +149,48 @@ export function UserEditor({ user }: UserEditorProps) {
             )}
           />
         )}
+
+        <FormField
+          control={form.control}
+          name="fullName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Full Name</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="department"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Department</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
