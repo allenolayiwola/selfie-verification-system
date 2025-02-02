@@ -21,7 +21,7 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-8">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Selfie Verification System</CardTitle>
+            <CardTitle>ID Verification System</CardTitle>
           </CardHeader>
           <CardContent>
             <LoginForm />
@@ -32,11 +32,9 @@ export default function AuthPage() {
       <div className="hidden md:flex flex-col justify-center bg-primary/5 p-12">
         <div className="space-y-4">
           <Shield className="w-12 h-12 text-primary" />
-          <h2 className="text-3xl font-bold">Secure Selfie Verification</h2>
+          <h2 className="text-3xl font-bold">Secure ID Verification</h2>
           <p className="text-muted-foreground">
-            Our advanced system ensures secure and reliable identity verification through
-            facial recognition technology. Perfect for businesses requiring high security
-            standards.
+            Our advanced ID verification system seamlessly authenticates users by integrating with Ghana's National Identification Authority (NIA) system. It ensures secure and reliable identity verification through facial recognition technology, making it ideal for businesses that require high security and regulatory compliance.
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
-# Selfie Verification System
+# ID Verification System
 
-A secure and intelligent selfie verification application leveraging advanced image analysis and user experience technologies. This application provides professional photo authentication with comprehensive security features and intuitive user interactions.
+A secure and intelligent ID verification application leveraging advanced image analysis and user experience technologies. This application provides professional photo authentication with comprehensive security features and intuitive user interactions.
 
 ## Features
 
@@ -70,7 +70,7 @@ The application will be available at `http://localhost:5000`
 
 ## Features Overview
 
-### Selfie Verification Process
+### ID Verification Process
 - Real-time face detection with bounding box display
 - Liveness detection through motion analysis
 - Image quality assessment including:
