@@ -37,12 +37,21 @@ async function getUserByUsername(username: string) {
 }
 
 export function setupAuth(app: Express) {
-  const store = new PostgresSessionStore({ pool, createTableIfMissing: true });
+  const store = new PostgresSessionStore({ 
+    pool, 
+    createTableIfMissing: true,
+    tableName: 'session' // Explicitly set table name for Azure
+  });
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID!,
+    secret: process.env.SESSION_SECRET || process.env.REPL_ID!, // Allow custom secret in production
     resave: false,
     saveUninitialized: false,
     store,
+    cookie: {
+      secure: app.get("env") === "production",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
   };
 
   if (app.get("env") === "production") {
