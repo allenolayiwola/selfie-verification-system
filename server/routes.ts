@@ -2,17 +2,69 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { verifications, users } from "@db/schema";
+import { verifications, users, insertUserSchema } from "@db/schema";
 import { eq } from "drizzle-orm";
+import { fromZodError } from "zod-validation-error";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Register new user
+  app.post("/api/register", async (req, res) => {
+    try {
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = fromZodError(result.error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      // Check if username already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, result.data.username))
+        .limit(1);
+
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Create new user with hashed password
+      const [user] = await db
+        .insert(users)
+        .values({
+          ...result.data,
+          password: await hashPassword(result.data.password),
+          role: "user" // Default role for new registrations
+        })
+        .returning();
+
+      // Log the user in after registration
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ error: "Failed to log in after registration" });
+        }
+        res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Failed to register user" });
+    }
+  });
+
   // Health check endpoint for Azure
   app.get("/health", async (req, res) => {
-    // More detailed health check including database connection
     try {
-      // Basic connection test
       await db.select().from(users).limit(1);
       res.status(200).json({ 
         status: "healthy",
