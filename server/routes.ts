@@ -1,12 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
 import { db } from "@db";
-import { verifications, users, insertUserSchema } from "@db/schema";
+import { users, verifications, insertUserSchema } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { fromZodError } from "zod-validation-error";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
 
 const scryptAsync = promisify(scrypt);
 
@@ -16,8 +17,49 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
+async function comparePasswords(supplied: string, stored: string) {
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return hashedBuf.equals(suppliedBuf);
+}
+
 export function registerRoutes(app: Express): Server {
-  setupAuth(app);
+  // Passport configuration
+  passport.use(new LocalStrategy(async (username, password, done) => {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (!user || !(await comparePasswords(password, user.password))) {
+        return done(null, false);
+      }
+
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  }));
+
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
 
   // Register new user
   app.post("/api/register", async (req, res) => {
@@ -62,7 +104,43 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Health check endpoint for Azure
+  // Login endpoint
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any) => {
+      if (err) {
+        return res.status(500).json({ error: "Authentication error" });
+      }
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ error: "Login error" });
+        }
+        return res.json(user);
+      });
+    })(req, res, next);
+  });
+
+  // Get current user
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json(req.user);
+  });
+
+  // Logout endpoint
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout error" });
+      }
+      res.sendStatus(200);
+    });
+  });
+
+  // Health check endpoint
   app.get("/health", async (req, res) => {
     try {
       await db.select().from(users).limit(1);
@@ -83,34 +161,20 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Submit verification
+  // Submit verification endpoint
   app.post("/api/verify", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const { merchantId, pinNumber, imageData } = req.body;
 
     try {
-      const response = await fetch("https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          merchant_id: merchantId,
-          pin_number: pinNumber,
-          image_data: imageData
-        })
-      });
-
-      const apiResponse = await response.json();
-
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
         merchantId,
         pinNumber,
         imageData,
-        status: apiResponse.success ? "approved" : "rejected",
-        response: JSON.stringify(apiResponse)
+        status: "pending",
+        response: null
       }).returning();
 
       res.json(verification);
@@ -147,53 +211,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching user verifications:', error);
       res.status(500).json({ error: "Failed to fetch user verifications" });
-    }
-  });
-
-  // Get all users (admin only)
-  app.get("/api/users", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const allUsers = await db.select().from(users);
-      res.json(allUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ error: "Failed to fetch users" });
-    }
-  });
-
-  // Update user (admin only or self)
-  app.patch("/api/users/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-
-    const userId = parseInt(req.params.id);
-    // Only allow admins to update other users, or users to update themselves
-    if (req.user.role !== "admin" && req.user.id !== userId) {
-      return res.sendStatus(403);
-    }
-
-    const { username, role } = req.body;
-    // Only admins can change roles
-    if (role && req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      const [updatedUser] = await db.update(users)
-        .set({ 
-          username: username,
-          ...(role && { role }) // Only include role if it was provided
-        })
-        .where(eq(users.id, userId))
-        .returning();
-
-      res.json(updatedUser);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      res.status(500).json({ error: "Failed to update user" });
     }
   });
 

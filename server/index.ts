@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { db } from "@db";
 import { users } from "@db/schema";
 import pgSession from "connect-pg-simple";
+import passport from "passport";
 
 // Set default NODE_ENV if not provided
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
@@ -36,6 +37,10 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
+
+// Initialize Passport and restore authentication state from session
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -88,7 +93,7 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = parseInt(process.env.PORT || '8080');
+    const PORT = parseInt(process.env.PORT || '5000');
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
       log(`serving on port ${PORT}`);
