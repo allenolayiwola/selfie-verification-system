@@ -9,11 +9,11 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Health check endpoint for Azure
-  app.get("/health", (req, res) => {
+  app.get("/health", async (req, res) => {
     // More detailed health check including database connection
     try {
       // Basic connection test
-      db.select().from(users).limit(1);
+      await db.select().from(users).limit(1);
       res.status(200).json({ 
         status: "healthy",
         timestamp: new Date().toISOString(),

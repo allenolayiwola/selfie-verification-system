@@ -1,6 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "@db";
+import { users } from "@db/schema";
+import pgSession from "connect-pg-simple";
 
 // Set default NODE_ENV if not provided
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
@@ -12,6 +16,28 @@ app.use(express.urlencoded({ extended: false }));
 // Enable trust proxy for Azure
 app.set('trust proxy', 1);
 
+// Configure session middleware
+const PostgresqlStore = pgSession(session);
+app.use(session({
+  store: new PostgresqlStore({
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    },
+    createTableIfMissing: true
+  }),
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -25,18 +51,16 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+    let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+    if (capturedJsonResponse) {
+      logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
     }
+
+    if (logLine.length > 80) {
+      logLine = logLine.slice(0, 79) + "…";
+    }
+
+    log(logLine);
   });
 
   next();
@@ -44,14 +68,18 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Test database connection using a simple query
+    const dbTest = await db.select().from(users).limit(1);
+    console.log('Database connection successful');
+
     const server = registerRoutes(app);
 
+    // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Server Error:', err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-
       res.status(status).json({ message });
-      console.error('Server Error:', err);
     });
 
     if (process.env.NODE_ENV === "development") {
