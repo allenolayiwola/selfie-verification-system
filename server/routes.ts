@@ -130,6 +130,56 @@ export function registerRoutes(app: Express): Server {
     res.json(req.user);
   });
 
+  // Get all users (admin only)
+  app.get("/api/users", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const allUsers = await db.select().from(users);
+      res.json(allUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Update user (admin only or self)
+  app.patch("/api/users/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const userId = parseInt(req.params.id);
+    // Only allow admins to update other users, or users to update themselves
+    if (req.user.role !== "admin" && req.user.id !== userId) {
+      return res.sendStatus(403);
+    }
+
+    const { username, role, fullName, email, department } = req.body;
+    // Only admins can change roles
+    if (role && req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const [updatedUser] = await db.update(users)
+        .set({ 
+          ...(username && { username }),
+          ...(role && { role }),
+          ...(fullName && { fullName }),
+          ...(email && { email }),
+          ...(department && { department })
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
   // Logout endpoint
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
