@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { db } from "@db";
+import { db, pool } from "@db";
 import { users } from "@db/schema";
 import pgSession from "connect-pg-simple";
 import passport from "passport";
@@ -21,17 +21,7 @@ app.set('trust proxy', 1);
 const PostgresqlStore = pgSession(session);
 app.use(session({
   store: new PostgresqlStore({
-    conObject: {
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false,
-        ssl: true,
-        checkServerIdentity: () => undefined
-      } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000
-    },
+    pool,
     createTableIfMissing: true,
     // Add error handler for session store
     errorLog: (err) => {
@@ -82,11 +72,37 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+// Database connection retry logic
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 5000; // 5 seconds
+
+async function connectWithRetry(retryCount = 0): Promise<void> {
   try {
+    console.log(`Attempting database connection (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
     // Test database connection using a simple query
     const dbTest = await db.select().from(users).limit(1);
     console.log('Database connection successful');
+    return;
+  } catch (error) {
+    console.error(`Database connection attempt ${retryCount + 1} failed:`, error);
+
+    if (retryCount < MAX_RETRIES) {
+      console.log(`Retrying in ${RETRY_DELAY / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return connectWithRetry(retryCount + 1);
+    }
+
+    throw error;
+  }
+}
+
+// Application startup
+(async () => {
+  try {
+    console.log(`Starting application in ${process.env.NODE_ENV} mode...`);
+    console.log('Database URL:', process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':***@')); // Hide password
+
+    await connectWithRetry();
 
     const server = registerRoutes(app);
 
@@ -104,10 +120,13 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = parseInt(process.env.PORT || '8080');
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
-      log(`serving on port ${PORT}`);
+    const port = parseInt(process.env.PORT || '8080');
+
+    // In production, we let Azure handle SSL termination
+    // Just use the basic HTTP server
+    server.listen(port, '0.0.0.0', () => {
+      console.log(`Server is running on port ${port} in ${process.env.NODE_ENV} mode`);
+      log(`serving on port ${port}`);
     });
   } catch (error) {
     console.error('Application startup error:', error);

@@ -1,14 +1,6 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "./schema";
-
-// Configure WebSocket for Neon database
-neonConfig.webSocketConstructor = ws;
-// Disable WebSocket in production Azure environment
-if (process.env.NODE_ENV === 'production') {
-  neonConfig.wsProxy = undefined; // Use undefined instead of false to match the type
-}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -16,20 +8,53 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure the pool with SSL options for production
+// Configure WebSocket for Azure environment
+if (process.env.NODE_ENV === 'production') {
+  neonConfig.webSocketConstructor = require('ws');
+  neonConfig.useSecureWebSocket = true;
+  neonConfig.pipelineTLS = true;
+  neonConfig.pipelineConnect = true;
+  neonConfig.wsProxy = (host) => {
+    console.log('WebSocket proxy host:', host);
+    return host;
+  };
+}
+
+// Configure the pool with proper settings for serverless environment
 const poolConfig = {
   connectionString: process.env.DATABASE_URL,
-  // Always enable SSL in production with proper error handling
+  max: 10, // Lower max connections for serverless
+  idleTimeoutMillis: 15000, // Close idle clients after 15 seconds
+  connectionTimeoutMillis: 5000, // Return an error after 5 seconds if connection could not be established
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false, // Required for Azure PostgreSQL
-    ssl: true,
-    checkServerIdentity: () => undefined // Skip hostname checks
-  } : undefined,
-  // Add connection pool settings for better stability
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000 // Return an error after 2 seconds if connection could not be established
+  } : undefined
 };
 
+console.log('Initializing database connection pool...');
+
 export const pool = new Pool(poolConfig);
+
+// Enhanced error handling for pool events
+pool.on('connect', () => {
+  console.log('New client connected to database');
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected database pool error:', err);
+});
+
+pool.on('remove', () => {
+  console.log('Client removed from pool');
+});
+
 export const db = drizzle(pool, { schema });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down database pool...');
+  pool.end(() => {
+    console.log('Database pool has ended');
+    process.exit(0);
+  });
+});
