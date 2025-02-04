@@ -1,25 +1,26 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCw, Sun, AlertTriangle, User } from "lucide-react";
+import { Camera, RefreshCw, Sun, AlertTriangle, User, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import * as tf from '@tensorflow/tfjs';
 import * as faceDetection from '@tensorflow-models/face-detection';
 
-const CAPTURE_WIDTH = 640;
-const CAPTURE_HEIGHT = 480;
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+// Reduced capture dimensions
+const CAPTURE_WIDTH = 480;
+const CAPTURE_HEIGHT = 360;
+const MAX_FILE_SIZE = 1024 * 1024;
 const MIN_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS = 200;
 const MIN_CONTRAST = 30;
 const FACE_CONFIDENCE_THRESHOLD = 0.8;
 const MOVEMENT_THRESHOLD = 20;
 const MOVEMENT_HISTORY_LENGTH = 10;
-const IDEAL_FACE_WIDTH_RATIO = 0.5; // Face should take up ~50% of frame width
-const MAX_HEAD_TILT_ANGLE = 15; // Maximum allowed head tilt in degrees
-const MIN_FACE_SIZE = 0.3; // Minimum face size relative to frame
-const MAX_FACE_SIZE = 0.7; // Maximum face size relative to frame
+const IDEAL_FACE_WIDTH_RATIO = 0.5;
+const MAX_HEAD_TILT_ANGLE = 15;
+const MIN_FACE_SIZE = 0.3;
+const MAX_FACE_SIZE = 0.7;
 
 interface WebcamCaptureProps {
   onCapture: (imageData: string) => void;
@@ -48,6 +49,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const [facePosition, setFacePosition] = useState<FacePosition | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [movementHistory, setMovementHistory] = useState<FacePosition[]>([]);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageQuality, setImageQuality] = useState<ImageQuality>({
     isCentered: false,
     isRightSize: false,
@@ -121,14 +123,14 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       y: face.y + face.height / 2
     };
 
-    const isCentered = 
+    const isCentered =
       Math.abs(faceCenter.x - centerX) < CAPTURE_WIDTH * 0.1 &&
       Math.abs(faceCenter.y - centerY) < CAPTURE_HEIGHT * 0.1;
 
     // Check face size
     const faceWidthRatio = face.width / CAPTURE_WIDTH;
-    const isRightSize = 
-      faceWidthRatio >= MIN_FACE_SIZE && 
+    const isRightSize =
+      faceWidthRatio >= MIN_FACE_SIZE &&
       faceWidthRatio <= MAX_FACE_SIZE;
 
     // Calculate head tilt (simplified)
@@ -214,9 +216,9 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     if (!imageSrc) return;
 
     const { brightness, contrast } = await analyzeLighting(imageSrc);
-    const isGood = brightness >= MIN_BRIGHTNESS && 
-                   brightness <= MAX_BRIGHTNESS && 
-                   contrast >= MIN_CONTRAST;
+    const isGood = brightness >= MIN_BRIGHTNESS &&
+      brightness <= MAX_BRIGHTNESS &&
+      contrast >= MIN_CONTRAST;
 
     setLightingStatus({ brightness, contrast, isGood });
   }, []);
@@ -272,131 +274,164 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       return;
     }
 
-    onCapture(imageSrc);
-  }, [onCapture, faceDetected, isLive, imageQuality.score]);
+    setCapturedImage(imageSrc);
+  }, [faceDetected, isLive, imageQuality.score]);
+
+  const confirmCapture = useCallback(() => {
+    if (capturedImage) {
+      onCapture(capturedImage);
+    }
+  }, [capturedImage, onCapture]);
+
+  const retake = useCallback(() => {
+    setCapturedImage(null);
+  }, []);
 
   return (
     <div className="space-y-4">
-      <div className="relative border rounded-lg overflow-hidden">
-        <Webcam
-          ref={webcamRef}
-          audio={false}
-          width={CAPTURE_WIDTH}
-          height={CAPTURE_HEIGHT}
-          screenshotFormat="image/jpeg"
-          videoConstraints={{
-            width: CAPTURE_WIDTH,
-            height: CAPTURE_HEIGHT,
-            facingMode: "user"
-          }}
-          className="w-full"
-        />
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Live Camera View */}
+        <div className={`relative border rounded-lg overflow-hidden ${capturedImage ? 'hidden md:block' : ''}`}>
+          <Webcam
+            ref={webcamRef}
+            audio={false}
+            width={CAPTURE_WIDTH}
+            height={CAPTURE_HEIGHT}
+            screenshotFormat="image/jpeg"
+            videoConstraints={{
+              width: CAPTURE_WIDTH,
+              height: CAPTURE_HEIGHT,
+              facingMode: "user"
+            }}
+            className="w-full"
+          />
 
-        {/* Face detection overlay */}
-        {facePosition && (
+          {/* Face detection overlay */}
+          {facePosition && (
+            <div
+              className="absolute border-2 border-green-500 rounded-lg"
+              style={{
+                left: `${(facePosition.x / CAPTURE_WIDTH) * 100}%`,
+                top: `${(facePosition.y / CAPTURE_HEIGHT) * 100}%`,
+                width: `${(facePosition.width / CAPTURE_WIDTH) * 100}%`,
+                height: `${(facePosition.height / CAPTURE_HEIGHT) * 100}%`
+              }}
+            />
+          )}
+
+          {/* Ideal face position guide */}
           <div
-            className="absolute border-2 border-green-500 rounded-lg"
+            className="absolute border-4 border-dashed border-primary/20 rounded-full"
             style={{
-              left: `${(facePosition.x / CAPTURE_WIDTH) * 100}%`,
-              top: `${(facePosition.y / CAPTURE_HEIGHT) * 100}%`,
-              width: `${(facePosition.width / CAPTURE_WIDTH) * 100}%`,
-              height: `${(facePosition.height / CAPTURE_HEIGHT) * 100}%`
+              left: '25%',
+              top: '15%',
+              width: '50%',
+              height: '70%',
+              pointerEvents: 'none'
             }}
           />
+
+          {/* Center cross guide */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <div className="w-8 h-px bg-primary/20"></div>
+              <div className="h-8 w-px bg-primary/20 -mt-4 ml-[15px]"></div>
+            </div>
+          </div>
+
+          {/* Status indicators */}
+          <div className="absolute top-4 right-4 bg-black/70 rounded-lg p-3 text-white space-y-4">
+            {/* Image Quality Status */}
+            <div className="quality-status">
+              <div className="flex items-center gap-2 mb-2">
+                <Camera className="w-4 h-4" />
+                <span className="text-sm">Image Quality: {imageQuality.score}%</span>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${imageQuality.isCentered ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span>Face Centered</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${imageQuality.isRightSize ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span>Correct Distance</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${imageQuality.isStraight ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span>Head Straight</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lighting status */}
+            <div className="lighting-status">
+              <div className="flex items-center gap-2 mb-2">
+                <Sun className="w-4 h-4" />
+                <span className="text-sm">Lighting Status</span>
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span>Brightness</span>
+                    <span>{Math.round(lightingStatus.brightness)}</span>
+                  </div>
+                  <Progress
+                    value={(lightingStatus.brightness / MAX_BRIGHTNESS) * 100}
+                    className="h-1"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span>Contrast</span>
+                    <span>{Math.round(lightingStatus.contrast)}</span>
+                  </div>
+                  <Progress
+                    value={(lightingStatus.contrast / 255) * 100}
+                    className="h-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Face detection status */}
+            <div className="liveness-status">
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-4 h-4" />
+                <span className="text-sm">Face Detection</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${faceDetected ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-xs">{faceDetected ? 'Face Detected' : 'No Face Found'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                  <span className="text-xs">{isLive ? 'Liveness Confirmed' : 'Checking Liveness'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Captured Image Preview */}
+        {capturedImage && (
+          <div className="relative border rounded-lg overflow-hidden">
+            <img
+              src={capturedImage}
+              alt="Captured"
+              className="w-full h-auto"
+            />
+            <div className="absolute top-2 right-2">
+              <Button
+                size="icon"
+                variant="destructive"
+                onClick={retake}
+              >
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         )}
-
-        {/* Ideal face position guide */}
-        <div 
-          className="absolute border-4 border-dashed border-primary/20 rounded-full face-guide"
-          style={{
-            left: '25%',
-            top: '15%',
-            width: '50%',
-            height: '70%',
-            pointerEvents: 'none'
-          }}
-        />
-
-        {/* Center cross guide */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div className="w-8 h-px bg-primary/20"></div>
-            <div className="h-8 w-px bg-primary/20 -mt-4 ml-[15px]"></div>
-          </div>
-        </div>
-
-        {/* Status indicators */}
-        <div className="absolute top-4 right-4 bg-black/70 rounded-lg p-3 text-white space-y-4">
-          {/* Image Quality Status */}
-          <div className="quality-status">
-            <div className="flex items-center gap-2 mb-2">
-              <Camera className="w-4 h-4" />
-              <span className="text-sm">Image Quality: {imageQuality.score}%</span>
-            </div>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${imageQuality.isCentered ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span>Face Centered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${imageQuality.isRightSize ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span>Correct Distance</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${imageQuality.isStraight ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span>Head Straight</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Lighting status */}
-          <div className="lighting-status">
-            <div className="flex items-center gap-2 mb-2">
-              <Sun className="w-4 h-4" />
-              <span className="text-sm">Lighting Status</span>
-            </div>
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span>Brightness</span>
-                  <span>{Math.round(lightingStatus.brightness)}</span>
-                </div>
-                <Progress 
-                  value={(lightingStatus.brightness / MAX_BRIGHTNESS) * 100} 
-                  className="h-1"
-                />
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span>Contrast</span>
-                  <span>{Math.round(lightingStatus.contrast)}</span>
-                </div>
-                <Progress 
-                  value={(lightingStatus.contrast / 255) * 100} 
-                  className="h-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Face detection status */}
-          <div className="liveness-status">
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4" />
-              <span className="text-sm">Face Detection</span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${faceDetected ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-xs">{faceDetected ? 'Face Detected' : 'No Face Found'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                <span className="text-xs">{isLive ? 'Liveness Confirmed' : 'Checking Liveness'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {error && (
@@ -416,21 +451,33 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       )}
 
       <div className="flex gap-2">
-        <Button 
-          onClick={capture} 
-          className="flex-1 capture-button"
-          disabled={!lightingStatus.isGood || !faceDetected || !isLive || imageQuality.score < 75}
-        >
-          <Camera className="w-4 h-4 mr-2" />
-          {!faceDetected ? "No Face Detected" : 
-           !isLive ? "Confirm Liveness" :
-           !lightingStatus.isGood ? "Adjust Lighting" :
-           imageQuality.score < 75 ? "Follow Guidelines" :
-           "Capture Photo"}
-        </Button>
-        <Button variant="outline" onClick={() => webcamRef.current?.getScreenshot()}>
-          <RefreshCw className="w-4 h-4" />
-        </Button>
+        {!capturedImage ? (
+          <Button
+            onClick={capture}
+            className="flex-1"
+            disabled={!lightingStatus.isGood || !faceDetected || !isLive || imageQuality.score < 75}
+          >
+            <Camera className="w-4 h-4 mr-2" />
+            {!faceDetected ? "No Face Detected" :
+              !isLive ? "Confirm Liveness" :
+                !lightingStatus.isGood ? "Adjust Lighting" :
+                  imageQuality.score < 75 ? "Follow Guidelines" :
+                    "Capture Photo"}
+          </Button>
+        ) : (
+          <Button
+            onClick={confirmCapture}
+            className="flex-1"
+          >
+            Use This Photo
+          </Button>
+        )}
+
+        {!capturedImage && (
+          <Button variant="outline" onClick={() => webcamRef.current?.getScreenshot()}>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        )}
       </div>
     </div>
   );

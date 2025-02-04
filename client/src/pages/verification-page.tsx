@@ -70,19 +70,21 @@ export default function VerificationPage() {
       )}
 
       <div className="container mx-auto px-4 py-8">
-        <Card>
+        <Card className="max-w-3xl mx-auto">
           <CardHeader>
             <CardTitle>Selfie Verification</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <h3 className="font-medium">1. Capture Photo</h3>
+              <h3 className="font-medium">
+                {capturedImage ? "2. Review Photo" : "1. Capture Photo"}
+              </h3>
               <WebcamCapture onCapture={setCapturedImage} />
             </div>
 
             {capturedImage && (
               <div className="space-y-2">
-                <h3 className="font-medium">2. Enter Verification Details</h3>
+                <h3 className="font-medium">3. Enter Verification Details</h3>
                 <VerificationForm
                   onSubmit={handleFormSubmit}
                   isLoading={verifyMutation.isPending}
