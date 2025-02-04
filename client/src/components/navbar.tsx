@@ -27,11 +27,11 @@ export default function Navbar() {
           </Link>
           {user.role === "admin" && (
             <>
-              <Link href="/admin">
-                <span className="text-sm font-medium hover:text-primary">Admin Panel</span>
-              </Link>
               <Link href="/users">
                 <span className="text-sm font-medium hover:text-primary">User Management</span>
+              </Link>
+              <Link href="/admin">
+                <span className="text-sm font-medium hover:text-primary">Reports</span>
               </Link>
             </>
           )}
@@ -65,16 +65,16 @@ export default function Navbar() {
           </Link>
           {user.role === "admin" && (
             <>
-              <Link href="/admin">
-                <span className="flex flex-col items-center gap-1 text-xs font-medium">
-                  <Shield className="h-5 w-5" />
-                  Admin
-                </span>
-              </Link>
               <Link href="/users">
                 <span className="flex flex-col items-center gap-1 text-xs font-medium">
                   <Users className="h-5 w-5" />
                   Users
+                </span>
+              </Link>
+              <Link href="/admin">
+                <span className="flex flex-col items-center gap-1 text-xs font-medium">
+                  <Shield className="h-5 w-5" />
+                  Reports
                 </span>
               </Link>
             </>
