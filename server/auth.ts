@@ -66,10 +66,12 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       const [user] = await getUserByUsername(username);
       if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
-        return done(null, user);
+        return done(null, false, { message: "Invalid username or password" });
+      } 
+      if (user.status !== "active") {
+        return done(null, false, { message: "Account pending activation. Please wait for admin approval." });
       }
+      return done(null, user);
     }),
   );
 
@@ -100,18 +102,29 @@ export function setupAuth(app: Express) {
       .insert(users)
       .values({
         ...result.data,
+        status: "pending", // Set initial status as pending
         password: await hashPassword(result.data.password),
       })
       .returning();
 
-    req.login(user, (err) => {
-      if (err) return next(err);
-      res.status(201).json(user);
+    // Don't automatically log in the user after registration
+    res.status(201).json({ 
+      message: "Registration successful. Please wait for admin activation before logging in.",
+      username: user.username 
     });
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) return next(err);
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -125,7 +138,7 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
-  
+
   app.get("/healthz", (req, res) => {
     res.sendStatus(200);
   });
