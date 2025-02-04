@@ -70,7 +70,7 @@ export default function VerificationPage() {
       )}
 
       <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-3xl mx-auto">
+        <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle>Selfie Verification</CardTitle>
           </CardHeader>

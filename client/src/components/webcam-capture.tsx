@@ -8,8 +8,8 @@ import * as tf from '@tensorflow/tfjs';
 import * as faceDetection from '@tensorflow-models/face-detection';
 
 // Reduced capture dimensions
-const CAPTURE_WIDTH = 480;
-const CAPTURE_HEIGHT = 360;
+const CAPTURE_WIDTH = 640;
+const CAPTURE_HEIGHT = 480;
 const MAX_FILE_SIZE = 1024 * 1024;
 const MIN_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS = 200;
@@ -52,6 +52,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageQuality, setImageQuality] = useState<ImageQuality>({
     isCentered: false,
+    isRightSize: false,
     isRightSize: false,
     isStraight: false,
     isSharp: false,
