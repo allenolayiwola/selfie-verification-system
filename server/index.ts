@@ -14,9 +14,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Enable trust proxy for Azure
-app.set('trust proxy', 1);
-
 // Configure session middleware
 const PostgresqlStore = pgSession(session);
 app.use(session({
@@ -39,47 +36,29 @@ app.use(session({
   }
 }));
 
-// Initialize Passport and restore authentication state from session
+// Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
   res.on("finish", () => {
     const duration = Date.now() - start;
-    let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-    if (capturedJsonResponse) {
-      logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-    }
-
-    if (logLine.length > 80) {
-      logLine = logLine.slice(0, 79) + "…";
-    }
-
-    log(logLine);
+    log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
   });
-
   next();
 });
 
-// Database connection retry logic
-const MAX_RETRIES = 5;
-const RETRY_DELAY = 5000; // 5 seconds
+// Simple connection retry for development
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000; // 2 seconds
 
 async function connectWithRetry(retryCount = 0): Promise<void> {
   try {
     console.log(`Attempting database connection (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
-    // Test database connection using a simple query
+
+    // Test database connection
     const dbTest = await db.select().from(users).limit(1);
     console.log('Database connection successful');
     return;
@@ -100,7 +79,6 @@ async function connectWithRetry(retryCount = 0): Promise<void> {
 (async () => {
   try {
     console.log(`Starting application in ${process.env.NODE_ENV} mode...`);
-    console.log('Database URL:', process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':***@')); // Hide password
 
     await connectWithRetry();
 
@@ -120,10 +98,7 @@ async function connectWithRetry(retryCount = 0): Promise<void> {
       serveStatic(app);
     }
 
-    const port = parseInt(process.env.PORT || '8080');
-
-    // In production, we let Azure handle SSL termination
-    // Just use the basic HTTP server
+    const port = parseInt(process.env.PORT || '5000');
     server.listen(port, '0.0.0.0', () => {
       console.log(`Server is running on port ${port} in ${process.env.NODE_ENV} mode`);
       log(`serving on port ${port}`);

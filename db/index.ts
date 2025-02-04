@@ -1,6 +1,7 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from "./schema";
+import WebSocket from 'ws';
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -8,40 +9,35 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure WebSocket for Azure environment
-if (process.env.NODE_ENV === 'production') {
-  neonConfig.webSocketConstructor = require('ws');
-  neonConfig.useSecureWebSocket = true;
-  neonConfig.pipelineTLS = true;
-  neonConfig.pipelineConnect = true;
-  neonConfig.wsProxy = (host) => {
-    console.log('WebSocket proxy host:', host);
-    return host;
-  };
-}
+// Configure WebSocket for local development
+neonConfig.webSocketConstructor = WebSocket;
+neonConfig.useSecureWebSocket = true;
 
-// Configure the pool with proper settings for serverless environment
+// Basic configuration for development
+console.log('Initializing database connection pool...');
+
+// Configure the pool with basic settings
 const poolConfig = {
   connectionString: process.env.DATABASE_URL,
-  max: 10, // Lower max connections for serverless
-  idleTimeoutMillis: 15000, // Close idle clients after 15 seconds
-  connectionTimeoutMillis: 5000, // Return an error after 5 seconds if connection could not be established
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false, // Required for Azure PostgreSQL
-  } : undefined
+  max: 5
 };
-
-console.log('Initializing database connection pool...');
 
 export const pool = new Pool(poolConfig);
 
 // Enhanced error handling for pool events
-pool.on('connect', () => {
+pool.on('connect', (client) => {
   console.log('New client connected to database');
+  client.on('error', (err) => {
+    console.error('Client specific error:', err);
+  });
 });
 
 pool.on('error', (err) => {
   console.error('Unexpected database pool error:', err);
+});
+
+pool.on('acquire', () => {
+  console.log('Client acquired from pool');
 });
 
 pool.on('remove', () => {
