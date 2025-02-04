@@ -208,6 +208,39 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update user status
+  app.patch("/api/users/:id/status", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(401);
+    }
+
+    const userId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    // Validate status
+    if (!["active", "suspended", "pending"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({ status })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+
+
   // Logout endpoint
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
