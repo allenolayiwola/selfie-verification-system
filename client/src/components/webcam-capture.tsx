@@ -71,9 +71,11 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       await tf.ready();
       const model = await faceDetection.createDetector(
         faceDetection.SupportedModels.MediaPipeFaceDetector,
-        { 
+        {
           runtime: 'tfjs',
-          modelType: 'full'
+          modelType: 'full',
+          maxFaces: MAX_FACES_ALLOWED,
+          refineLandmarks: true
         }
       );
       setFaceDetector(model);
@@ -83,25 +85,37 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
   // Function to detect expressions based on face landmarks
   const detectExpression = (face: any): string => {
-    if (!face.keypoints) return 'neutral';
-
-    try {
-      const leftEye = face.keypoints.find((kp: any) => kp.name === 'leftEye');
-      const rightEye = face.keypoints.find((kp: any) => kp.name === 'rightEye');
-      const mouth = face.keypoints.find((kp: any) => kp.name === 'mouth');
-
-      if (leftEye && rightEye && mouth) {
-        const eyeDistance = Math.sqrt(
-          Math.pow(rightEye.x - leftEye.x, 2) + Math.pow(rightEye.y - leftEye.y, 2)
-        );
-        const mouthWidth = mouth.score * eyeDistance;
-        return mouthWidth > eyeDistance * 1.2 ? 'smiling' : 'neutral';
-      }
-    } catch (error) {
-      console.error('Expression detection error:', error);
+    if (!face.keypoints || face.keypoints.length === 0) {
+      console.log('No keypoints found in face detection');
+      return 'neutral';
     }
 
-    return 'neutral';
+    try {
+      // Log keypoints for debugging
+      console.log('Face keypoints:', face.keypoints);
+
+      const mouthBottom = face.keypoints.find((kp: any) => kp.name === 'mouthBottom');
+      const mouthTop = face.keypoints.find((kp: any) => kp.name === 'mouthTop');
+      const rightMouth = face.keypoints.find((kp: any) => kp.name === 'mouthRight');
+      const leftMouth = face.keypoints.find((kp: any) => kp.name === 'mouthLeft');
+
+      if (mouthBottom && mouthTop && rightMouth && leftMouth) {
+        // Calculate mouth height and width
+        const mouthHeight = Math.abs(mouthBottom.y - mouthTop.y);
+        const mouthWidth = Math.abs(rightMouth.x - leftMouth.x);
+
+        // Calculate mouth aspect ratio
+        const mouthRatio = mouthWidth / mouthHeight;
+
+        // A wider mouth typically indicates a smile
+        return mouthRatio > 2.0 ? 'smiling' : 'neutral';
+      }
+
+      return 'neutral';
+    } catch (error) {
+      console.error('Expression detection error:', error);
+      return 'neutral';
+    }
   };
 
   const detectFaces = useCallback(async () => {
@@ -201,8 +215,8 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       faceWidthRatio >= MIN_FACE_SIZE &&
       faceWidthRatio <= MAX_FACE_SIZE;
 
-    const isStraight = true; 
-    const isSharp = true; 
+    const isStraight = true;
+    const isSharp = true;
 
     const score = [
       isCentered,
