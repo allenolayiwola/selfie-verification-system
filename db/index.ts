@@ -9,17 +9,20 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure WebSocket for local development
+// Configure WebSocket for all environments
 neonConfig.webSocketConstructor = WebSocket;
 neonConfig.useSecureWebSocket = true;
 
-// Basic configuration for development
+// Basic configuration with SSL for production
 console.log('Initializing database connection pool...');
 
-// Configure the pool with basic settings
+// Configure the pool with environment-specific settings
 const poolConfig = {
   connectionString: process.env.DATABASE_URL,
-  max: 5
+  max: 5,
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: true
+  } : undefined
 };
 
 export const pool = new Pool(poolConfig);

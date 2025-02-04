@@ -14,6 +14,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Set trust proxy for production
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Configure session middleware
 const PostgresqlStore = pgSession(session);
 app.use(session({
@@ -50,13 +55,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Simple connection retry for development
-const MAX_RETRIES = 3;
+// Enhanced connection retry for production
+const MAX_RETRIES = process.env.NODE_ENV === 'production' ? 5 : 3;
 const RETRY_DELAY = 2000; // 2 seconds
 
 async function connectWithRetry(retryCount = 0): Promise<void> {
   try {
     console.log(`Attempting database connection (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+    console.log(`Database connection details: host=${process.env.PGHOST}, port=${process.env.PGPORT}, database=${process.env.PGDATABASE}, user=${process.env.PGUSER}`);
 
     // Test database connection
     const dbTest = await db.select().from(users).limit(1);
@@ -98,7 +104,8 @@ async function connectWithRetry(retryCount = 0): Promise<void> {
       serveStatic(app);
     }
 
-    const port = parseInt(process.env.PORT || '5000');
+    // Use port 8080 for production (Digital Ocean) and 5000 for development
+    const port = parseInt(process.env.PORT || (process.env.NODE_ENV === 'production' ? '8080' : '5000'));
     server.listen(port, '0.0.0.0', () => {
       console.log(`Server is running on port ${port} in ${process.env.NODE_ENV} mode`);
       log(`serving on port ${port}`);
