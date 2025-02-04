@@ -14,7 +14,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg">
-            <Link href="/">ID Verification</Link>
+            <Link href="/">ID Verification System</Link>
           </span>
         </div>
 
