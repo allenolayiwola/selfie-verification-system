@@ -23,9 +23,20 @@ app.use(session({
   store: new PostgresqlStore({
     conObject: {
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false,
+        ssl: true,
+        checkServerIdentity: () => undefined
+      } : false,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000
     },
-    createTableIfMissing: true
+    createTableIfMissing: true,
+    // Add error handler for session store
+    errorLog: (err) => {
+      console.error('Session store error:', err);
+    }
   }),
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
@@ -93,7 +104,7 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = parseInt(process.env.PORT || '5000');
+    const PORT = parseInt(process.env.PORT || '8080');
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
       log(`serving on port ${PORT}`);

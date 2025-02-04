@@ -1,0 +1,95 @@
+2025-02-04T10:44:03.070Z INFO  - Starting container for site
+2025-02-04T10:44:03.071Z INFO  - docker run -d --expose=8080 --name id-verification-system_1_1ad106ee -e WEBSITE_USE_DIAGNOSTIC_SERVER=true -e WEBSITE_SITE_NAME=id-verification-system -e WEBSITE_AUTH_ENABLED=False -e PORT=8080 -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=id-verification-system-adbehmgpddgkc4bz.ukwest-01.azurewebsites.net -e WEBSITE_INSTANCE_ID=fe2766d4b8694c3740cec49fdbbfc9717cd723ccd0335b03bf68aac4de35fa02 -e NODE_OPTIONS=--require /agents/nodejs/build/src/Loader.js appsvc/node:20-lts_20240819.2.tuxprod
+2025-02-04T10:44:03.072Z INFO  - Logging is not enabled for this container.Please use https://aka.ms/linux-diagnostics to enable logging to see container logs here.
+2025-02-04T10:44:03.773Z INFO  - Initiating warmup request to container id-verification-system_1_1ad106ee for site id-verification-system02/04/2025 10:44:02
+2025-02-04T10:44:03.712885747Z    _____
+2025-02-04T10:44:03.712925772Z   /  _  \ __________ _________   ____
+2025-02-04T10:44:03.712935720Z  /  /_\  \\___   /  |  \_  __ \_/ __ \
+2025-02-04T10:44:03.712942953Z /    |    \/    /|  |  /|  | \/\  ___/
+2025-02-04T10:44:03.712949265Z \____|__  /_____ \____/ |__|    \___  >
+2025-02-04T10:44:03.712955687Z         \/      \/                  \/
+2025-02-04T10:44:03.712962149Z A P P   S E R V I C E   O N   L I N U X
+2025-02-04T10:44:03.712968701Z
+2025-02-04T10:44:03.712975193Z Documentation: http://aka.ms/webapp-linux
+2025-02-04T10:44:03.712980934Z NodeJS quickstart: https://aka.ms/node-qs
+2025-02-04T10:44:03.712986394Z NodeJS Version : v20.15.1
+2025-02-04T10:44:03.712992005Z Note: Any data outside '/home' is not persisted
+2025-02-04T10:44:03.712997706Z
+2025-02-04T10:44:05.402196528Z Starting OpenBSD Secure Shell server: sshd.
+2025-02-04T10:44:05.406522087Z WEBSITES_INCLUDE_CLOUD_CERTS is not set to true.
+2025-02-04T10:44:05.483331376Z Starting periodic command scheduler: cron.
+2025-02-04T10:44:05.557069967Z Could not find build manifest file at '/home/site/wwwroot/oryx-manifest.toml'
+2025-02-04T10:44:05.557127825Z Could not find operation ID in manifest. Generating an operation id...
+2025-02-04T10:44:05.557137863Z Build Operation ID: 2f4b3378-55f1-4930-aa88-112e4d2bc44b
+2025-02-04T10:44:05.785329796Z Environment Variables for Application Insight's IPA Codeless Configuration exists..
+2025-02-04T10:44:05.802195366Z Writing output script to '/opt/startup/startup.sh'
+2025-02-04T10:44:05.834796416Z Running #!/bin/sh
+2025-02-04T10:44:05.834825861Z
+2025-02-04T10:44:05.834833616Z # Enter the source directory to make sure the script runs where the user expects
+2025-02-04T10:44:05.834840308Z cd "/home/site/wwwroot"
+2025-02-04T10:44:05.834846630Z
+2025-02-04T10:44:05.834852050Z export NODE_PATH=/usr/local/lib/node_modules:$NODE_PATH
+2025-02-04T10:44:05.834858091Z if [ -z "$PORT" ]; then
+2025-02-04T10:44:05.834865234Z 		export PORT=8080
+2025-02-04T10:44:05.834876566Z fi
+2025-02-04T10:44:05.834882647Z
+2025-02-04T10:44:05.834887035Z npm start
+2025-02-04T10:44:07.008759673Z npm info using npm@10.7.0
+2025-02-04T10:44:07.009023995Z npm info using node@v20.15.1
+2025-02-04T10:44:07.635952800Z
+2025-02-04T10:44:07.635993746Z > rest-express@1.0.0 start
+2025-02-04T10:44:07.636002843Z > NODE_ENV=production node dist/index.js
+2025-02-04T10:44:07.636010187Z
+2025-02-04T10:44:10.728655598Z Application startup error: ErrorEvent {
+2025-02-04T10:44:10.730131935Z   [Symbol(kTarget)]: WebSocket {
+2025-02-04T10:44:10.730157583Z     _events: [Object: null prototype] {
+2025-02-04T10:44:10.730165968Z       error: [Function],
+2025-02-04T10:44:10.730185315Z       message: [Function],
+2025-02-04T10:44:10.730191616Z       close: [Function],
+2025-02-04T10:44:10.730196836Z       open: [Function]
+2025-02-04T10:44:10.730202266Z     },
+2025-02-04T10:44:10.730207656Z     _eventsCount: 4,
+2025-02-04T10:44:10.730213296Z     _maxListeners: undefined,
+2025-02-04T10:44:10.730218887Z     _binaryType: 'arraybuffer',
+2025-02-04T10:44:10.730224638Z     _closeCode: 1006,
+2025-02-04T10:44:10.730230298Z     _closeFrameReceived: false,
+2025-02-04T10:44:10.730235969Z     _closeFrameSent: false,
+2025-02-04T10:44:10.730241860Z     _closeMessage: <Buffer >,
+2025-02-04T10:44:10.730248472Z     _closeTimer: null,
+2025-02-04T10:44:10.730254323Z     _errorEmitted: true,
+2025-02-04T10:44:10.730260063Z     _extensions: {},
+2025-02-04T10:44:10.730265934Z     _paused: false,
+2025-02-04T10:44:10.730271765Z     _protocol: '',
+2025-02-04T10:44:10.730277596Z     _readyState: 3,
+2025-02-04T10:44:10.730283257Z     _receiver: null,
+2025-02-04T10:44:10.730289208Z     _sender: null,
+2025-02-04T10:44:10.730295029Z     _socket: null,
+2025-02-04T10:44:10.730300990Z     _bufferedAmount: 0,
+2025-02-04T10:44:10.730306700Z     _isServer: false,
+2025-02-04T10:44:10.730312421Z     _redirects: 0,
+2025-02-04T10:44:10.730318082Z     _autoPong: true,
+2025-02-04T10:44:10.730324023Z     _url: 'wss://id-verification-system-server.postgres.database.azure.com/v2',
+2025-02-04T10:44:10.730330274Z     _req: null,
+2025-02-04T10:44:10.730335905Z     [Symbol(shapeMode)]: false,
+2025-02-04T10:44:10.730341776Z     [Symbol(kCapture)]: false
+2025-02-04T10:44:10.730347506Z   },
+2025-02-04T10:44:10.730353307Z   [Symbol(kType)]: 'error',
+2025-02-04T10:44:10.730359088Z   [Symbol(kError)]: Error: connect ECONNREFUSED 10.0.2.4:443
+2025-02-04T10:44:10.730366652Z       at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1606:16)
+2025-02-04T10:44:10.730477438Z       at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+2025-02-04T10:44:10.730485343Z     errno: -111,
+2025-02-04T10:44:10.730491424Z     code: 'ECONNREFUSED',
+2025-02-04T10:44:10.730497445Z     syscall: 'connect',
+2025-02-04T10:44:10.730503517Z     address: '10.0.2.4',
+2025-02-04T10:44:10.730509838Z     port: 443
+2025-02-04T10:44:10.730515258Z   },
+2025-02-04T10:44:10.730542860Z   [Symbol(kMessage)]: 'connect ECONNREFUSED 10.0.2.4:443'
+2025-02-04T10:44:10.730550113Z }
+2025-02-04T10:44:10.746035668Z npm http fetch GET 200 https://registry.npmjs.org/npm 227ms
+2025-02-04T10:44:10.748974177Z npm notice
+2025-02-04T10:44:10.748993142Z npm notice New major version of npm available! 10.7.0 -> 11.1.0
+2025-02-04T10:44:10.749002460Z npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.1.0
+2025-02-04T10:44:10.749012458Z npm notice To update run: npm install -g npm@11.1.0
+2025-02-04T10:44:10.749024911Z npm notice
+2025-02-04T10:44:19.118Z ERROR - Container id-verification-system_1_1ad106ee for site id-verification-system has exited, failing site start
+2025-02-04T10:44:19.123Z ERROR - Container id-verification-system_1_1ad106ee didn't respond to HTTP pings on port: 8080, failing site start. See container logs for debugging.
