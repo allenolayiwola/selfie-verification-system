@@ -21,14 +21,14 @@ export default function Navbar() {
 
         <nav className="hidden md:flex items-center">
           <Link href="/">
-            <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+            <span className="flex items-center gap-2 px-4 text-sm font-medium text-blue-600 hover:text-orange-500 transition-colors">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
             </span>
           </Link>
           <Separator orientation="vertical" className="h-6 mx-1" />
           <Link href="/verify">
-            <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+            <span className="flex items-center gap-2 px-4 text-sm font-medium text-blue-600 hover:text-orange-500 transition-colors">
               <Camera className="h-4 w-4" />
               Verification
             </span>
@@ -37,14 +37,14 @@ export default function Navbar() {
             <>
               <Separator orientation="vertical" className="h-6 mx-1" />
               <Link href="/users">
-                <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+                <span className="flex items-center gap-2 px-4 text-sm font-medium text-blue-600 hover:text-orange-500 transition-colors">
                   <Users className="h-4 w-4" />
                   User Management
                 </span>
               </Link>
               <Separator orientation="vertical" className="h-6 mx-1" />
               <Link href="/admin">
-                <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+                <span className="flex items-center gap-2 px-4 text-sm font-medium text-blue-600 hover:text-orange-500 transition-colors">
                   <FileBarChart className="h-4 w-4" />
                   Reports
                 </span>
@@ -68,13 +68,13 @@ export default function Navbar() {
       <div className="md:hidden border-t">
         <nav className="container mx-auto px-4 py-2 flex justify-around">
           <Link href="/">
-            <span className="flex flex-col items-center gap-1 text-xs font-medium">
+            <span className="flex flex-col items-center gap-1 text-xs font-medium text-blue-600 hover:text-orange-500 transition-colors">
               <LayoutDashboard className="h-5 w-5" />
               Dashboard
             </span>
           </Link>
           <Link href="/verify">
-            <span className="flex flex-col items-center gap-1 text-xs font-medium">
+            <span className="flex flex-col items-center gap-1 text-xs font-medium text-blue-600 hover:text-orange-500 transition-colors">
               <Camera className="h-5 w-5" />
               Verify
             </span>
@@ -82,13 +82,13 @@ export default function Navbar() {
           {user.role === "admin" && (
             <>
               <Link href="/users">
-                <span className="flex flex-col items-center gap-1 text-xs font-medium">
+                <span className="flex flex-col items-center gap-1 text-xs font-medium text-blue-600 hover:text-orange-500 transition-colors">
                   <Users className="h-5 w-5" />
                   Users
                 </span>
               </Link>
               <Link href="/admin">
-                <span className="flex flex-col items-center gap-1 text-xs font-medium">
+                <span className="flex flex-col items-center gap-1 text-xs font-medium text-blue-600 hover:text-orange-500 transition-colors">
                   <FileBarChart className="h-5 w-5" />
                   Reports
                 </span>
