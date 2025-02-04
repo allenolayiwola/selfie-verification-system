@@ -72,7 +72,7 @@ export default function VerificationPage() {
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
-            <CardTitle>Selfie Verification</CardTitle>
+            <CardTitle>ID/Photo Verification</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">

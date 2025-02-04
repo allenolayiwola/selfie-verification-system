@@ -65,7 +65,7 @@ export default function HomePage() {
             <CardHeader>
               <CardTitle>Start New Verification</CardTitle>
               <CardDescription>
-                Capture a new selfie and verify your identity
+                Take a photo and verify your identity
               </CardDescription>
             </CardHeader>
             <CardContent>
