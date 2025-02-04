@@ -26,7 +26,7 @@ export default function Navbar() {
               Dashboard
             </span>
           </Link>
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          <Separator orientation="vertical" className="h-6 mx-1" />
           <Link href="/verify">
             <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
               <Camera className="h-4 w-4" />
@@ -35,14 +35,14 @@ export default function Navbar() {
           </Link>
           {user.role === "admin" && (
             <>
-              <Separator orientation="vertical" className="h-6 mx-2" />
+              <Separator orientation="vertical" className="h-6 mx-1" />
               <Link href="/users">
                 <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
                   <Users className="h-4 w-4" />
                   User Management
                 </span>
               </Link>
-              <Separator orientation="vertical" className="h-6 mx-2" />
+              <Separator orientation="vertical" className="h-6 mx-1" />
               <Link href="/admin">
                 <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
                   <FileBarChart className="h-4 w-4" />
