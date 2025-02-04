@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Shield, Camera, LogOut, Users } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Shield, Camera, LogOut, Users, LayoutDashboard, FileBarChart } from "lucide-react";
 
 export default function Navbar() {
   const { user, logoutMutation } = useAuth();
@@ -18,20 +19,35 @@ export default function Navbar() {
           </span>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center">
           <Link href="/">
-            <span className="text-sm font-medium hover:text-primary">Dashboard</span>
+            <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </span>
           </Link>
+          <Separator orientation="vertical" className="h-6 mx-2" />
           <Link href="/verify">
-            <span className="text-sm font-medium hover:text-primary">Verification</span>
+            <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+              <Camera className="h-4 w-4" />
+              Verification
+            </span>
           </Link>
           {user.role === "admin" && (
             <>
+              <Separator orientation="vertical" className="h-6 mx-2" />
               <Link href="/users">
-                <span className="text-sm font-medium hover:text-primary">User Management</span>
+                <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+                  <Users className="h-4 w-4" />
+                  User Management
+                </span>
               </Link>
+              <Separator orientation="vertical" className="h-6 mx-2" />
               <Link href="/admin">
-                <span className="text-sm font-medium hover:text-primary">Reports</span>
+                <span className="flex items-center gap-2 px-4 text-sm font-medium hover:text-primary">
+                  <FileBarChart className="h-4 w-4" />
+                  Reports
+                </span>
               </Link>
             </>
           )}
@@ -53,7 +69,7 @@ export default function Navbar() {
         <nav className="container mx-auto px-4 py-2 flex justify-around">
           <Link href="/">
             <span className="flex flex-col items-center gap-1 text-xs font-medium">
-              <Shield className="h-5 w-5" />
+              <LayoutDashboard className="h-5 w-5" />
               Dashboard
             </span>
           </Link>
@@ -73,7 +89,7 @@ export default function Navbar() {
               </Link>
               <Link href="/admin">
                 <span className="flex flex-col items-center gap-1 text-xs font-medium">
-                  <Shield className="h-5 w-5" />
+                  <FileBarChart className="h-5 w-5" />
                   Reports
                 </span>
               </Link>
