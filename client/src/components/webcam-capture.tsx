@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCw, Sun, AlertTriangle, User, XCircle } from "lucide-react";
+import { Camera, RefreshCw, Sun, AlertTriangle, User, XCircle, Users, SmilePlus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import * as tf from '@tensorflow/tfjs';
@@ -20,6 +20,7 @@ const IDEAL_FACE_WIDTH_RATIO = 0.5;
 const MAX_HEAD_TILT_ANGLE = 15;
 const MIN_FACE_SIZE = 0.3;
 const MAX_FACE_SIZE = 0.7;
+const MAX_FACES_ALLOWED = 4;
 
 interface WebcamCaptureProps {
   onCapture: (imageData: string) => void;
@@ -30,6 +31,7 @@ interface FacePosition {
   y: number;
   width: number;
   height: number;
+  expression?: string;
 }
 
 interface ImageQuality {
@@ -45,7 +47,8 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const [error, setError] = useState<string | null>(null);
   const [faceDetector, setFaceDetector] = useState<faceDetection.FaceDetector | null>(null);
   const [faceDetected, setFaceDetected] = useState(false);
-  const [facePosition, setFacePosition] = useState<FacePosition | null>(null);
+  const [multipleFaces, setMultipleFaces] = useState<boolean>(false);
+  const [facePositions, setFacePositions] = useState<FacePosition[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [movementHistory, setMovementHistory] = useState<FacePosition[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -68,12 +71,80 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       await tf.ready();
       const model = await faceDetection.createDetector(
         faceDetection.SupportedModels.MediaPipeFaceDetector,
-        { runtime: 'tfjs' }
+        { 
+          runtime: 'tfjs',
+          modelType: 'full'
+        }
       );
       setFaceDetector(model);
     };
     loadModel();
   }, []);
+
+  // Function to detect expressions based on face landmarks
+  const detectExpression = (face: any): string => {
+    if (!face.keypoints) return 'neutral';
+
+    try {
+      const leftEye = face.keypoints.find((kp: any) => kp.name === 'leftEye');
+      const rightEye = face.keypoints.find((kp: any) => kp.name === 'rightEye');
+      const mouth = face.keypoints.find((kp: any) => kp.name === 'mouth');
+
+      if (leftEye && rightEye && mouth) {
+        const eyeDistance = Math.sqrt(
+          Math.pow(rightEye.x - leftEye.x, 2) + Math.pow(rightEye.y - leftEye.y, 2)
+        );
+        const mouthWidth = mouth.score * eyeDistance;
+        return mouthWidth > eyeDistance * 1.2 ? 'smiling' : 'neutral';
+      }
+    } catch (error) {
+      console.error('Expression detection error:', error);
+    }
+
+    return 'neutral';
+  };
+
+  const detectFaces = useCallback(async () => {
+    if (!faceDetector || !webcamRef.current) return;
+
+    const video = webcamRef.current.video;
+    if (!video) return;
+
+    try {
+      const faces = await faceDetector.estimateFaces(video);
+      const detectedFaces = faces.map(face => ({
+        x: face.box.xMin,
+        y: face.box.yMin,
+        width: face.box.width,
+        height: face.box.height,
+        expression: detectExpression(face)
+      }));
+
+      setFacePositions(detectedFaces);
+      setFaceDetected(detectedFaces.length > 0);
+      setMultipleFaces(detectedFaces.length > 1);
+
+      if (detectedFaces.length > 0) {
+        const primaryFace = detectedFaces[0];
+        setImageQuality(analyzeImageQuality(primaryFace));
+
+        setMovementHistory(prev => {
+          const newHistory = [...prev, primaryFace].slice(-MOVEMENT_HISTORY_LENGTH);
+          if (newHistory.length >= 2) {
+            const lastPos = newHistory[newHistory.length - 1];
+            const prevPos = newHistory[newHistory.length - 2];
+            const movement = Math.abs(lastPos.x - prevPos.x) + Math.abs(lastPos.y - prevPos.y);
+            if (movement > MOVEMENT_THRESHOLD) {
+              setIsLive(true);
+            }
+          }
+          return newHistory;
+        });
+      }
+    } catch (error) {
+      console.error('Face detection error:', error);
+    }
+  }, [faceDetector, detectExpression]);
 
   const analyzeLighting = (imageData: string) => {
     return new Promise<{ brightness: number; contrast: number }>((resolve) => {
@@ -130,8 +201,8 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       faceWidthRatio >= MIN_FACE_SIZE &&
       faceWidthRatio <= MAX_FACE_SIZE;
 
-    const isStraight = true; // Placeholder for head tilt detection
-    const isSharp = true; // Placeholder for blur detection
+    const isStraight = true; 
+    const isSharp = true; 
 
     const score = [
       isCentered,
@@ -149,54 +220,10 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     };
   }, []);
 
-  // Check face detection and liveness
-  const detectFace = useCallback(async () => {
-    if (!faceDetector || !webcamRef.current) return;
-
-    const video = webcamRef.current.video;
-    if (!video) return;
-
-    try {
-      const faces = await faceDetector.estimateFaces(video);
-      const face = faces[0];
-
-      if (face && face.box && face.box.width) {
-        const newPosition = {
-          x: face.box.xMin,
-          y: face.box.yMin,
-          width: face.box.width,
-          height: face.box.height
-        };
-
-        setFacePosition(newPosition);
-        setFaceDetected(true);
-        setImageQuality(analyzeImageQuality(newPosition));
-
-        setMovementHistory(prev => {
-          const newHistory = [...prev, newPosition].slice(-MOVEMENT_HISTORY_LENGTH);
-          if (newHistory.length >= 2) {
-            const lastPos = newHistory[newHistory.length - 1];
-            const prevPos = newHistory[newHistory.length - 2];
-            const movement = Math.abs(lastPos.x - prevPos.x) + Math.abs(lastPos.y - prevPos.y);
-            if (movement > MOVEMENT_THRESHOLD) {
-              setIsLive(true);
-            }
-          }
-          return newHistory;
-        });
-      } else {
-        setFaceDetected(false);
-        setFacePosition(null);
-      }
-    } catch (error) {
-      console.error('Face detection error:', error);
-    }
-  }, [faceDetector, analyzeImageQuality]);
-
   useEffect(() => {
-    const interval = setInterval(detectFace, 100);
+    const interval = setInterval(detectFaces, 100);
     return () => clearInterval(interval);
-  }, [detectFace]);
+  }, [detectFaces]);
 
   const checkLightingConditions = useCallback(async () => {
     const imageSrc = webcamRef.current?.getScreenshot();
@@ -306,20 +333,25 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
         {!capturedImage && (
           <>
-            {/* Face detection overlay */}
-            {facePosition && (
+            {facePositions.map((face, index) => (
               <div
-                className="absolute border-2 border-green-500 rounded-lg"
+                key={index}
+                className={`absolute border-2 ${
+                  face.expression === 'smiling' ? 'border-green-500' : 'border-yellow-500'
+                } rounded-lg`}
                 style={{
-                  left: `${(facePosition.x / CAPTURE_WIDTH) * 100}%`,
-                  top: `${(facePosition.y / CAPTURE_HEIGHT) * 100}%`,
-                  width: `${(facePosition.width / CAPTURE_WIDTH) * 100}%`,
-                  height: `${(facePosition.height / CAPTURE_HEIGHT) * 100}%`
+                  left: `${(face.x / CAPTURE_WIDTH) * 100}%`,
+                  top: `${(face.y / CAPTURE_HEIGHT) * 100}%`,
+                  width: `${(face.width / CAPTURE_WIDTH) * 100}%`,
+                  height: `${(face.height / CAPTURE_HEIGHT) * 100}%`
                 }}
-              />
-            )}
+              >
+                <div className="absolute -top-6 left-0 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                  {face.expression === 'smiling' ? '😊 Smiling' : '😐 Neutral'}
+                </div>
+              </div>
+            ))}
 
-            {/* Ideal face position guide */}
             <div
               className="absolute border-4 border-dashed border-primary/20 rounded-full"
               style={{
@@ -331,7 +363,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
               }}
             />
 
-            {/* Center cross guide */}
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div className="w-8 h-px bg-primary/20"></div>
@@ -339,9 +370,34 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
               </div>
             </div>
 
-            {/* Status indicators */}
             <div className="absolute top-4 right-4 bg-black/70 rounded-lg p-3 text-white space-y-4">
-              {/* Image Quality Status */}
+              <div className="face-count-status">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4" />
+                  <span className="text-sm">Face Count: {facePositions.length}</span>
+                </div>
+                {multipleFaces && (
+                  <div className="text-xs text-yellow-400">
+                    Multiple faces detected
+                  </div>
+                )}
+              </div>
+
+              <div className="expression-status">
+                <div className="flex items-center gap-2 mb-2">
+                  <SmilePlus className="w-4 h-4" />
+                  <span className="text-sm">Expression Detection</span>
+                </div>
+                {facePositions.map((face, index) => (
+                  <div key={index} className="flex items-center gap-2 text-xs">
+                    <div className={`w-2 h-2 rounded-full ${
+                      face.expression === 'smiling' ? 'bg-green-500' : 'bg-yellow-500'
+                    }`} />
+                    <span>Face {index + 1}: {face.expression}</span>
+                  </div>
+                ))}
+              </div>
+
               <div className="quality-status">
                 <div className="flex items-center gap-2 mb-2">
                   <Camera className="w-4 h-4" />
@@ -363,7 +419,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
                 </div>
               </div>
 
-              {/* Lighting status */}
               <div className="lighting-status">
                 <div className="flex items-center gap-2 mb-2">
                   <Sun className="w-4 h-4" />
@@ -393,7 +448,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
                 </div>
               </div>
 
-              {/* Face detection status */}
               <div className="liveness-status">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="w-4 h-4" />
@@ -437,14 +491,21 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
             <Button
               onClick={capture}
               className="flex-1"
-              disabled={!lightingStatus.isGood || !faceDetected || !isLive || imageQuality.score < 75}
+              disabled={
+                !lightingStatus.isGood ||
+                !faceDetected ||
+                !isLive ||
+                imageQuality.score < 75 ||
+                facePositions.length > MAX_FACES_ALLOWED
+              }
             >
               <Camera className="w-4 h-4 mr-2" />
               {!faceDetected ? "No Face Detected" :
                 !isLive ? "Confirm Liveness" :
                   !lightingStatus.isGood ? "Adjust Lighting" :
                     imageQuality.score < 75 ? "Follow Guidelines" :
-                      "Capture Photo"}
+                      facePositions.length > MAX_FACES_ALLOWED ? "Too Many Faces" :
+                        "Capture Photo"}
             </Button>
             <Button variant="outline" onClick={() => webcamRef.current?.getScreenshot()}>
               <RefreshCw className="w-4 h-4" />
