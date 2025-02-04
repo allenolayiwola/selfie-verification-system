@@ -163,7 +163,7 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const [updatedUser] = await db.update(users)
-        .set({ 
+        .set({
           ...(username && { username }),
           ...(role && { role }),
           ...(fullName && { fullName }),
@@ -177,6 +177,34 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error updating user:', error);
       res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete("/api/users/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(401);
+    }
+
+    const userId = parseInt(req.params.id);
+    // Prevent deleting your own account
+    if (req.user.id === userId) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    try {
+      const [deletedUser] = await db.delete(users)
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!deletedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(deletedUser);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: "Failed to delete user" });
     }
   });
 
@@ -194,7 +222,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/health", async (req, res) => {
     try {
       await db.select().from(users).limit(1);
-      res.status(200).json({ 
+      res.status(200).json({
         status: "healthy",
         timestamp: new Date().toISOString(),
         env: process.env.NODE_ENV,
@@ -203,7 +231,7 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Health check failed:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         status: "unhealthy",
         error: "Database connection failed",
         timestamp: new Date().toISOString()
