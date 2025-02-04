@@ -23,7 +23,7 @@ export default function Navbar() {
             <span className="text-sm font-medium hover:text-primary">Dashboard</span>
           </Link>
           <Link href="/verify">
-            <span className="text-sm font-medium hover:text-primary">New Verification</span>
+            <span className="text-sm font-medium hover:text-primary">Verification</span>
           </Link>
           {user.role === "admin" && (
             <>
