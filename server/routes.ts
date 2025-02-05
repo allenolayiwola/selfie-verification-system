@@ -26,9 +26,9 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function registerRoutes(app: Express): Server {
-  // Configure express to handle larger payloads
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  // Configure express to handle payloads up to 1MB
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
   // Passport configuration
   passport.use(new LocalStrategy(async (username, password, done) => {
@@ -287,6 +287,17 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const { merchantId, pinNumber, imageData } = req.body;
+
+    // Validate image size
+    const base64Size = (imageData.length * 3) / 4;
+    if (base64Size > 1024 * 1024) { // 1MB limit
+      return res.status(400).json({ error: "Image size exceeds 1MB limit" });
+    }
+
+    // Validate image format
+    if (!imageData.startsWith('data:image/png;base64,')) {
+      return res.status(400).json({ error: "Invalid image format. PNG required." });
+    }
 
     try {
       const [verification] = await db.insert(verifications).values({

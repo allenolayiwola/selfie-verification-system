@@ -9,7 +9,7 @@ import * as faceDetection from '@tensorflow-models/face-detection';
 
 const CAPTURE_WIDTH = 640;
 const CAPTURE_HEIGHT = 480;
-const MAX_FILE_SIZE = 1024 * 1024;
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
 const MIN_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS = 200;
 const MIN_CONTRAST = 30;
@@ -258,13 +258,18 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
   const capture = useCallback(async () => {
     setError(null);
-    const imageSrc = webcamRef.current?.getScreenshot();
+    const imageSrc = webcamRef.current?.getScreenshot({
+      width: CAPTURE_WIDTH,
+      height: CAPTURE_HEIGHT,
+      type: "image/png"
+    });
 
     if (!imageSrc) {
       setError("Failed to capture image");
       return;
     }
 
+    // Calculate base64 size
     const base64Size = (imageSrc.length * 3) / 4;
     if (base64Size > MAX_FILE_SIZE) {
       setError("Image size exceeds 1MB limit");
@@ -318,7 +323,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
             audio={false}
             width={CAPTURE_WIDTH}
             height={CAPTURE_HEIGHT}
-            screenshotFormat="image/jpeg"
+            screenshotFormat="image/png"
             videoConstraints={{
               width: CAPTURE_WIDTH,
               height: CAPTURE_HEIGHT,
