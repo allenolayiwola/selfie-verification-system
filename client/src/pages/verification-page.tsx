@@ -8,12 +8,23 @@ import WebcamCapture from "@/components/webcam-capture";
 import VerificationForm from "@/components/verification-form";
 import OnboardingTutorial from "@/components/onboarding-tutorial";
 import Navbar from "@/components/navbar";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export default function VerificationPage() {
   const [, setLocation] = useLocation();
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
 
   useEffect(() => {
     // Check if this is the user's first visit
@@ -30,11 +41,15 @@ export default function VerificationPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/verifications"] });
-      toast({
-        title: "Verification submitted",
-        description: "Your verification has been submitted successfully.",
-      });
-      setLocation("/");
+      if (user?.role === "guest") {
+        setShowCompletionDialog(true);
+      } else {
+        toast({
+          title: "Verification submitted",
+          description: "Your verification has been submitted successfully.",
+        });
+        setLocation("/");
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -59,6 +74,13 @@ export default function VerificationPage() {
       ...formData,
       imageData: capturedImage.split(",")[1], // Remove data:image/jpeg;base64, prefix
     });
+  };
+
+  const handleCompletionClose = () => {
+    setShowCompletionDialog(false);
+    if (user?.role === "guest") {
+      logoutMutation.mutate();
+    }
   };
 
   return (
@@ -94,6 +116,21 @@ export default function VerificationPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Completion Dialog */}
+      <AlertDialog open={showCompletionDialog} onOpenChange={handleCompletionClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verification Submitted Successfully</AlertDialogTitle>
+            <AlertDialogDescription>
+              Thank you for submitting your verification. Our team will review your submission and process it accordingly.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogAction onClick={handleCompletionClose}>
+            Close
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

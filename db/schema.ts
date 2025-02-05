@@ -6,7 +6,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
-  role: text("role", { enum: ["user", "admin"] }).default("user").notNull(),
+  role: text("role", { enum: ["user", "admin", "guest"] }).default("guest").notNull(),
   status: text("status", { enum: ["pending", "active", "suspended"] }).default("pending").notNull(),
   fullName: text("full_name"),
   department: text("department"),

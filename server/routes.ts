@@ -61,7 +61,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Register new user
+  // Update the registration endpoint
   app.post("/api/register", async (req, res) => {
     try {
       const result = insertUserSchema.safeParse(req.body);
@@ -87,7 +87,8 @@ export function registerRoutes(app: Express): Server {
         .values({
           ...result.data,
           password: await hashPassword(result.data.password),
-          role: "user" // Default role for new registrations
+          role: "guest", // Set default role to guest
+          status: "active"  // Guests are automatically activated
         })
         .returning();
 
