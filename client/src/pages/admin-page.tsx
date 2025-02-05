@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -15,13 +15,19 @@ import {
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, ArrowLeft } from "lucide-react";
+import { Eye, ArrowLeft, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import Navbar from "@/components/navbar";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const COLORS = ["#10B981", "#EF4444", "#F59E0B"]; // success, destructive, warning
 
@@ -29,9 +35,33 @@ export default function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedVerification, setSelectedVerification] = useState<any>(null);
+  const { toast } = useToast();
 
   const { data: verifications } = useQuery<any[]>({
     queryKey: ["/api/verifications"],
+  });
+
+  const updateVerificationMutation = useMutation({
+    mutationFn: async ({ id, status, response }: { id: number; status: string; response?: string }) => {
+      const res = await apiRequest("PATCH", `/api/verifications/${id}`, { status, response });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/verifications"] });
+      toast({
+        title: "Verification updated",
+        description: "The verification status has been updated successfully.",
+      });
+      setSelectedVerification(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   if (user?.role !== "admin") {
@@ -63,6 +93,10 @@ export default function AdminPage() {
     date,
     count,
   }));
+
+  const handleVerificationAction = (verification: any, status: string) => {
+    setSelectedVerification({ ...verification, newStatus: status });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -131,7 +165,7 @@ export default function AdminPage() {
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => 
+                    label={({ name, percent }) =>
                       `${name} ${(percent * 100).toFixed(0)}%`
                     }
                   >
@@ -156,11 +190,12 @@ export default function AdminPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>User</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Merchant ID</TableHead>
                   <TableHead>PIN</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Image</TableHead>
+                  <TableHead>Response</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -173,22 +208,51 @@ export default function AdminPage() {
                     <TableCell>{verification.merchantId}</TableCell>
                     <TableCell>{verification.pinNumber}</TableCell>
                     <TableCell>
-                      <Badge variant={
-                        verification.status === "approved" ? "success" :
-                        verification.status === "rejected" ? "destructive" :
-                        "default"
-                      }>
+                      <Badge
+                        variant={
+                          verification.status === "approved"
+                            ? "success"
+                            : verification.status === "rejected"
+                            ? "destructive"
+                            : "default"
+                        }
+                      >
                         {verification.status}
                       </Badge>
                     </TableCell>
+                    <TableCell>{verification.response || "-"}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedImage(verification.imageData)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedImage(verification.imageData)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {verification.status === "pending" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleVerificationAction(verification, "approved")
+                              }
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleVerificationAction(verification, "rejected")
+                              }
+                            >
+                              <XCircle className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -198,6 +262,7 @@ export default function AdminPage() {
         </Card>
       </main>
 
+      {/* Image Preview Dialog */}
       <AlertDialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <AlertDialogContent className="max-w-screen-sm">
           <AlertDialogHeader>
@@ -210,6 +275,48 @@ export default function AdminPage() {
               className="w-full rounded-lg"
             />
           )}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Verification Action Dialog */}
+      <AlertDialog open={!!selectedVerification} onOpenChange={() => setSelectedVerification(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedVerification?.newStatus === "approved"
+                ? "Approve Verification"
+                : "Reject Verification"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {selectedVerification?.newStatus} this verification?
+              {selectedVerification?.newStatus === "rejected" && (
+                <textarea
+                  className="mt-2 w-full h-24 p-2 border rounded-md"
+                  placeholder="Enter rejection reason..."
+                  onChange={(e) =>
+                    setSelectedVerification({
+                      ...selectedVerification,
+                      response: e.target.value,
+                    })
+                  }
+                />
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                updateVerificationMutation.mutate({
+                  id: selectedVerification.id,
+                  status: selectedVerification.newStatus,
+                  response: selectedVerification.response,
+                });
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

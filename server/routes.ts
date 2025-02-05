@@ -241,34 +241,38 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  // Logout endpoint
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Logout error" });
-      }
-      res.sendStatus(200);
-    });
-  });
+  // Update verification status (admin only)
+  app.patch("/api/verifications/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(401);
+    }
 
-  // Health check endpoint
-  app.get("/health", async (req, res) => {
+    const verificationId = parseInt(req.params.id);
+    const { status, response } = req.body;
+
+    // Validate status
+    if (!["pending", "approved", "rejected"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
     try {
-      await db.select().from(users).limit(1);
-      res.status(200).json({
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        env: process.env.NODE_ENV,
-        database: "connected",
-        server: "running"
-      });
+      const [updatedVerification] = await db
+        .update(verifications)
+        .set({ 
+          status,
+          response: response || null 
+        })
+        .where(eq(verifications.id, verificationId))
+        .returning();
+
+      if (!updatedVerification) {
+        return res.status(404).json({ error: "Verification not found" });
+      }
+
+      res.json(updatedVerification);
     } catch (error) {
-      console.error('Health check failed:', error);
-      res.status(500).json({
-        status: "unhealthy",
-        error: "Database connection failed",
-        timestamp: new Date().toISOString()
-      });
+      console.error('Error updating verification:', error);
+      res.status(500).json({ error: "Failed to update verification" });
     }
   });
 
@@ -322,6 +326,37 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching user verifications:', error);
       res.status(500).json({ error: "Failed to fetch user verifications" });
+    }
+  });
+
+  // Logout endpoint
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout error" });
+      }
+      res.sendStatus(200);
+    });
+  });
+
+  // Health check endpoint
+  app.get("/health", async (req, res) => {
+    try {
+      await db.select().from(users).limit(1);
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV,
+        database: "connected",
+        server: "running"
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(500).json({
+        status: "unhealthy",
+        error: "Database connection failed",
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
