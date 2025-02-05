@@ -1,4 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +11,17 @@ import Navbar from "@/components/navbar";
 
 export default function HomePage() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    // Redirect guest users to verification page
+    if (user?.role === "guest") {
+      setLocation("/verify");
+    }
+  }, [user, setLocation]);
+
+  if (user?.role === "guest") return null;
+
   const { data: verifications } = useQuery<any[]>({ 
     queryKey: ["/api/user/verifications"]
   });
