@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
 import { db } from "@db";
 import { users, verifications, insertUserSchema } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -25,6 +26,10 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function registerRoutes(app: Express): Server {
+  // Configure express to handle larger payloads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
   // Passport configuration
   passport.use(new LocalStrategy(async (username, password, done) => {
     try {
