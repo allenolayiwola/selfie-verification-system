@@ -22,6 +22,42 @@ const MIN_FACE_SIZE = 0.3;
 const MAX_FACE_SIZE = 0.7;
 const MAX_FACES_ALLOWED = 4;
 
+// Add compression utility function
+const compressImage = (imageSrc: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = CAPTURE_WIDTH;
+      canvas.height = CAPTURE_HEIGHT;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      // Draw image to canvas with specified dimensions
+      ctx.drawImage(img, 0, 0, CAPTURE_WIDTH, CAPTURE_HEIGHT);
+
+      // Get compressed image data
+      const compressedImage = canvas.toDataURL('image/png', 0.8);
+
+      // Check file size
+      const base64Size = (compressedImage.length * 3) / 4;
+      if (base64Size > MAX_FILE_SIZE) {
+        reject(new Error('Image size exceeds 1MB limit even after compression'));
+        return;
+      }
+
+      resolve(compressedImage);
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = imageSrc;
+  });
+};
+
 interface WebcamCaptureProps {
   onCapture: (imageData: string) => void;
 }
@@ -269,39 +305,39 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       return;
     }
 
-    // Calculate base64 size
-    const base64Size = (imageSrc.length * 3) / 4;
-    if (base64Size > MAX_FILE_SIZE) {
-      setError("Image size exceeds 1MB limit");
-      return;
-    }
+    try {
+      // Compress the image before further processing
+      const compressedImage = await compressImage(imageSrc);
 
-    if (!faceDetected) {
-      setError("No face detected in frame");
-      return;
-    }
+      if (!faceDetected) {
+        setError("No face detected in frame");
+        return;
+      }
 
-    if (!isLive) {
-      setError("Please move slightly to confirm liveness");
-      return;
-    }
+      if (!isLive) {
+        setError("Please move slightly to confirm liveness");
+        return;
+      }
 
-    if (imageQuality.score < 75) {
-      setError("Please adjust your position according to the guidelines");
-      return;
-    }
+      if (imageQuality.score < 75) {
+        setError("Please adjust your position according to the guidelines");
+        return;
+      }
 
-    const { brightness, contrast } = await analyzeLighting(imageSrc);
-    if (brightness < MIN_BRIGHTNESS || brightness > MAX_BRIGHTNESS) {
-      setError("Poor lighting conditions. Please adjust lighting.");
-      return;
-    }
-    if (contrast < MIN_CONTRAST) {
-      setError("Image lacks contrast. Please improve lighting conditions.");
-      return;
-    }
+      const { brightness, contrast } = await analyzeLighting(compressedImage);
+      if (brightness < MIN_BRIGHTNESS || brightness > MAX_BRIGHTNESS) {
+        setError("Poor lighting conditions. Please adjust lighting.");
+        return;
+      }
+      if (contrast < MIN_CONTRAST) {
+        setError("Image lacks contrast. Please improve lighting conditions.");
+        return;
+      }
 
-    setCapturedImage(imageSrc);
+      setCapturedImage(compressedImage);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to process image");
+    }
   }, [faceDetected, isLive, imageQuality.score]);
 
   const confirmCapture = useCallback(() => {
