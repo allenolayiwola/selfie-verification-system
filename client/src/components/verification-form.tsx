@@ -13,8 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 
 const verificationFormSchema = z.object({
-  merchantId: z.string().min(1, "Merchant ID is required"),
-  pinNumber: z.string().min(1, "Ghana Card Number is required"),
+  pinNumber: z.string()
+    .min(1, "Ghana Card Number is required")
+    .regex(/^GHA-\d{8}-\d$/, "Must be in format GHA-xxxxxxxx-x"),
 });
 
 type VerificationFormData = z.infer<typeof verificationFormSchema>;
@@ -28,28 +29,21 @@ export default function VerificationForm({ onSubmit, isLoading }: VerificationFo
   const form = useForm<VerificationFormData>({
     resolver: zodResolver(verificationFormSchema),
     defaultValues: {
-      merchantId: "",
       pinNumber: "",
     },
   });
 
+  const handleSubmit = (data: VerificationFormData) => {
+    // Add fixed merchant ID to the form data
+    onSubmit({
+      ...data,
+      merchantId: "xxxxx-xxxxx-xxxxx"
+    });
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="merchantId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Merchant ID</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter merchant ID" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="pinNumber"
@@ -57,7 +51,14 @@ export default function VerificationForm({ onSubmit, isLoading }: VerificationFo
             <FormItem>
               <FormLabel>Ghana Card Number</FormLabel>
               <FormControl>
-                <Input placeholder="Enter Ghana Card number" {...field} />
+                <Input 
+                  placeholder="GHA-xxxxxxxx-x" 
+                  {...field} 
+                  onChange={(e) => {
+                    // Convert to uppercase for consistency
+                    field.onChange(e.target.value.toUpperCase());
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

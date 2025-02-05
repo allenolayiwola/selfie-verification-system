@@ -27,7 +27,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function registerRoutes(app: Express): Server {
   // Configure express to handle payloads up to 1MB
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '1mb', strict: true }));
   app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
   // Passport configuration
@@ -264,9 +264,9 @@ export function registerRoutes(app: Express): Server {
     try {
       const [updatedVerification] = await db
         .update(verifications)
-        .set({ 
+        .set({
           status,
-          response: response || null 
+          response: response || null
         })
         .where(eq(verifications.id, verificationId))
         .returning();
@@ -286,7 +286,8 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/verify", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
-    const { merchantId, pinNumber, imageData } = req.body;
+    const { pinNumber, imageData } = req.body;
+    const merchantId = "xxxxx-xxxxx-xxxxx"; // Fixed merchant ID
 
     // Validate image size
     const base64Size = (imageData.length * 3) / 4;
@@ -299,12 +300,17 @@ export function registerRoutes(app: Express): Server {
       return res.status(400).json({ error: "Invalid image format. PNG required." });
     }
 
+    // Validate PIN format
+    if (!/^GHA-\d{8}-\d$/.test(pinNumber)) {
+      return res.status(400).json({ error: "Invalid Ghana Card Number format" });
+    }
+
     try {
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
         merchantId,
         pinNumber,
-        imageData,
+        imageData: imageData.split(',')[1], // Remove data:image/png;base64, prefix
         status: "pending",
         response: null
       }).returning();
