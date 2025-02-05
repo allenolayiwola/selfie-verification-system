@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 
 const verificationFormSchema = z.object({
   merchantId: z.string().min(1, "Merchant ID is required"),
-  pinNumber: z.string().min(1, "PIN Number is required"),
+  pinNumber: z.string().min(1, "Ghana Card Number is required"),
 });
 
 type VerificationFormData = z.infer<typeof verificationFormSchema>;
@@ -55,9 +55,9 @@ export default function VerificationForm({ onSubmit, isLoading }: VerificationFo
           name="pinNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>PIN Number</FormLabel>
+              <FormLabel>Ghana Card Number</FormLabel>
               <FormControl>
-                <Input placeholder="Enter PIN number" {...field} />
+                <Input placeholder="Enter Ghana Card number" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
