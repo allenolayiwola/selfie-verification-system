@@ -165,41 +165,79 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       const leftEyebrow = face.keypoints.find((kp: any) => kp.name === 'leftEyebrow');
       const rightEyebrow = face.keypoints.find((kp: any) => kp.name === 'rightEyebrow');
 
-      // Multiple detection methods
+      // Debug logging
+      console.log('Eye keypoints:', {
+        leftEye,
+        rightEye,
+        leftEyeOuter,
+        leftEyeInner,
+        rightEyeOuter,
+        rightEyeInner,
+        leftEyebrow,
+        rightEyebrow
+      });
+
       let glassesScore = 0;
 
-      // Method 1: Check eyebrow to eye distance
+      // Method 1: Check eyebrow to eye distance (lowered threshold)
       if (leftEye && leftEyebrow && rightEye && rightEyebrow) {
         const leftEyeDistance = Math.abs(leftEye.y - leftEyebrow.y);
         const rightEyeDistance = Math.abs(rightEye.y - rightEyebrow.y);
         const averageDistance = (leftEyeDistance + rightEyeDistance) / 2;
 
-        if (averageDistance > 0.3) { // Reduced threshold
+        console.log('Method 1 - Average eyebrow distance:', averageDistance);
+        if (averageDistance > 0.15) { // Significantly reduced threshold
           glassesScore += 1;
         }
       }
 
-      // Method 2: Check eye corner positions
+      // Method 2: Check eye width ratio
       if (leftEyeOuter && leftEyeInner && rightEyeOuter && rightEyeInner) {
         const leftEyeWidth = Math.abs(leftEyeOuter.x - leftEyeInner.x);
         const rightEyeWidth = Math.abs(rightEyeOuter.x - rightEyeInner.x);
         const averageWidth = (leftEyeWidth + rightEyeWidth) / 2;
+        const expectedWidth = face.box.width * 0.12; // Reduced threshold
 
-        // Glasses typically make the detected eye area appear wider
-        if (averageWidth > face.box.width * 0.15) {
+        console.log('Method 2 - Eye width ratio:', {
+          averageWidth,
+          expectedWidth,
+          ratio: averageWidth / expectedWidth
+        });
+
+        if (averageWidth > expectedWidth) {
           glassesScore += 1;
         }
       }
 
-      // Method 3: Check for shadows/reflections around eyes
+      // Method 3: Check for eye region characteristics
       if (leftEye && rightEye) {
-        // Look for significant brightness differences around the eyes
-        const eyeRegionContrast = Math.abs(leftEye.score - rightEye.score);
-        if (eyeRegionContrast > 0.2) {
+        // Check confidence scores for potential reflection/occlusion
+        const eyeScoreDiff = Math.abs(leftEye.score - rightEye.score);
+        console.log('Method 3 - Eye score difference:', eyeScoreDiff);
+
+        if (eyeScoreDiff > 0.1) { // Reduced threshold
+          glassesScore += 1;
+        }
+
+        // Additional check for consistent eye detection confidence
+        const avgEyeScore = (leftEye.score + rightEye.score) / 2;
+        if (avgEyeScore < 0.85) { // Glasses often reduce detection confidence
           glassesScore += 1;
         }
       }
 
+      // Method 4: Check for potential frame edges
+      if (leftEyeOuter && rightEyeOuter) {
+        const eyeRegionWidth = Math.abs(rightEyeOuter.x - leftEyeOuter.x);
+        const eyeRegionRatio = eyeRegionWidth / face.box.width;
+
+        console.log('Method 4 - Eye region ratio:', eyeRegionRatio);
+        if (eyeRegionRatio > 0.45) { // Glasses frames often make eye region appear wider
+          glassesScore += 1;
+        }
+      }
+
+      console.log('Final glasses score:', glassesScore);
       // Consider glasses detected if at least 2 methods indicate their presence
       return glassesScore >= 2;
 
