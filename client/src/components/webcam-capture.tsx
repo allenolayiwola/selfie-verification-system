@@ -41,13 +41,13 @@ const compressImage = (imageSrc: string): Promise<string> => {
       // Draw image to canvas with specified dimensions
       ctx.drawImage(img, 0, 0, CAPTURE_WIDTH, CAPTURE_HEIGHT);
 
-      // Get compressed image data with higher compression
-      const compressedImage = canvas.toDataURL('image/jpeg', 0.6); // Changed to JPEG with higher compression
+      // Get compressed image data with PNG format
+      const compressedImage = canvas.toDataURL('image/png', 0.8);
 
       // Check file size
       const base64Size = (compressedImage.length * 3) / 4;
       if (base64Size > MAX_FILE_SIZE) {
-        reject(new Error('Image size exceeds 1MB limit even after compression'));
+        reject(new Error('Image size exceeds 1MB limit'));
         return;
       }
 
