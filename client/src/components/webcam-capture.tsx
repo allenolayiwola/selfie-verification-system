@@ -155,19 +155,54 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     if (!face.keypoints) return false;
 
     try {
+      // Get all eye-related keypoints
       const leftEye = face.keypoints.find((kp: any) => kp.name === 'leftEye');
       const rightEye = face.keypoints.find((kp: any) => kp.name === 'rightEye');
+      const leftEyeOuter = face.keypoints.find((kp: any) => kp.name === 'leftEyeOuter');
+      const leftEyeInner = face.keypoints.find((kp: any) => kp.name === 'leftEyeInner');
+      const rightEyeOuter = face.keypoints.find((kp: any) => kp.name === 'rightEyeOuter');
+      const rightEyeInner = face.keypoints.find((kp: any) => kp.name === 'rightEyeInner');
       const leftEyebrow = face.keypoints.find((kp: any) => kp.name === 'leftEyebrow');
       const rightEyebrow = face.keypoints.find((kp: any) => kp.name === 'rightEyebrow');
 
-      if (leftEye && rightEye && leftEyebrow && rightEyebrow) {
+      // Multiple detection methods
+      let glassesScore = 0;
+
+      // Method 1: Check eyebrow to eye distance
+      if (leftEye && leftEyebrow && rightEye && rightEyebrow) {
         const leftEyeDistance = Math.abs(leftEye.y - leftEyebrow.y);
         const rightEyeDistance = Math.abs(rightEye.y - rightEyebrow.y);
-
         const averageDistance = (leftEyeDistance + rightEyeDistance) / 2;
-        return averageDistance > GLASSES_DETECTION_THRESHOLD;
+
+        if (averageDistance > 0.3) { // Reduced threshold
+          glassesScore += 1;
+        }
       }
-      return false;
+
+      // Method 2: Check eye corner positions
+      if (leftEyeOuter && leftEyeInner && rightEyeOuter && rightEyeInner) {
+        const leftEyeWidth = Math.abs(leftEyeOuter.x - leftEyeInner.x);
+        const rightEyeWidth = Math.abs(rightEyeOuter.x - rightEyeInner.x);
+        const averageWidth = (leftEyeWidth + rightEyeWidth) / 2;
+
+        // Glasses typically make the detected eye area appear wider
+        if (averageWidth > face.box.width * 0.15) {
+          glassesScore += 1;
+        }
+      }
+
+      // Method 3: Check for shadows/reflections around eyes
+      if (leftEye && rightEye) {
+        // Look for significant brightness differences around the eyes
+        const eyeRegionContrast = Math.abs(leftEye.score - rightEye.score);
+        if (eyeRegionContrast > 0.2) {
+          glassesScore += 1;
+        }
+      }
+
+      // Consider glasses detected if at least 2 methods indicate their presence
+      return glassesScore >= 2;
+
     } catch (error) {
       console.error('Glasses detection error:', error);
       return false;
