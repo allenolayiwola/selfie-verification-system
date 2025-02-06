@@ -11,11 +11,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const verificationFormSchema = z.object({
-  pinNumber: z.string()
-    .min(1, "Ghana Card Number is required")
-    .regex(/^GHA-\d{8}-\d$/, "Must be in format GHA-xxxxxxxx-x"),
+  pinNumber: z.string().min(1, "Ghana Card Number is required"),
 });
 
 type VerificationFormData = z.infer<typeof verificationFormSchema>;
@@ -50,16 +54,21 @@ export default function VerificationForm({ onSubmit, isLoading }: VerificationFo
           render={({ field }) => (
             <FormItem>
               <FormLabel>Ghana Card Number</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="GHA-xxxxxxxx-x" 
-                  {...field} 
-                  onChange={(e) => {
-                    // Convert to uppercase for consistency
-                    field.onChange(e.target.value.toUpperCase());
-                  }}
-                />
-              </FormControl>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter your Ghana Card Number" 
+                        {...field} 
+                      />
+                    </FormControl>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Expected format: GHA-xxxxxxxx-x</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <FormMessage />
             </FormItem>
           )}

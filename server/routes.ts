@@ -300,11 +300,6 @@ export function registerRoutes(app: Express): Server {
       return res.status(400).json({ error: "Invalid image format. PNG required." });
     }
 
-    // Validate PIN format
-    if (!/^GHA-\d{8}-\d$/.test(pinNumber)) {
-      return res.status(400).json({ error: "Invalid Ghana Card Number format" });
-    }
-
     try {
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
