@@ -26,9 +26,9 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function registerRoutes(app: Express): Server {
-  // Configure express to handle payloads up to 1MB
-  app.use(express.json({ limit: '1mb', strict: true }));
-  app.use(express.urlencoded({ limit: '1mb', extended: true }));
+  // Configure express to handle larger payloads up to 5MB
+  app.use(express.json({ limit: '5mb', strict: true }));
+  app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
   // Passport configuration
   passport.use(new LocalStrategy(async (username, password, done) => {
