@@ -9,7 +9,7 @@ import * as faceDetection from '@tensorflow-models/face-detection';
 
 const CAPTURE_WIDTH = 640;
 const CAPTURE_HEIGHT = 480;
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes (matching API limit)
 const MIN_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS = 200;
 const MIN_CONTRAST = 30;
@@ -23,14 +23,32 @@ const MAX_FACE_SIZE = 0.7;
 const MAX_FACES_ALLOWED = 4;
 const GLASSES_DETECTION_THRESHOLD = 0.7; // Threshold for glasses detection confidence
 
-// Add compression utility function
+// Update compression function
 const compressImage = (imageSrc: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
+      // Create temporary canvas for compression
       const canvas = document.createElement('canvas');
-      canvas.width = CAPTURE_WIDTH;
-      canvas.height = CAPTURE_HEIGHT;
+
+      // Start with original dimensions
+      let width = CAPTURE_WIDTH;
+      let height = CAPTURE_HEIGHT;
+
+      // If image is too large, scale it down while maintaining aspect ratio
+      const maxDimension = 800;
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
 
       if (!ctx) {
@@ -38,16 +56,27 @@ const compressImage = (imageSrc: string): Promise<string> => {
         return;
       }
 
-      // Draw image to canvas with specified dimensions
-      ctx.drawImage(img, 0, 0, CAPTURE_WIDTH, CAPTURE_HEIGHT);
+      // Enable image smoothing for better quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-      // Get compressed image data with PNG format
-      const compressedImage = canvas.toDataURL('image/png', 0.8);
+      // Draw and compress image
+      ctx.drawImage(img, 0, 0, width, height);
 
-      // Check file size
-      const base64Size = (compressedImage.length * 3) / 4;
+      // Try different quality levels if needed
+      let quality = 1.0;
+      let compressedImage = canvas.toDataURL('image/png', quality);
+      let base64Size = (compressedImage.length * 3) / 4;
+
+      // Gradually reduce quality until file size is under limit
+      while (base64Size > MAX_FILE_SIZE && quality > 0.1) {
+        quality -= 0.1;
+        compressedImage = canvas.toDataURL('image/png', quality);
+        base64Size = (compressedImage.length * 3) / 4;
+      }
+
       if (base64Size > MAX_FILE_SIZE) {
-        reject(new Error('Image size exceeds 1MB limit'));
+        reject(new Error('Unable to compress image below 1MB while maintaining quality'));
         return;
       }
 
@@ -92,6 +121,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageQuality, setImageQuality] = useState<ImageQuality>({
     isCentered: false,
+    isRightSize: false,
     isRightSize: false,
     isStraight: false,
     isSharp: false,
