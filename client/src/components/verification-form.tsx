@@ -37,7 +37,7 @@ export default function VerificationForm({ onSubmit, isLoading }: VerificationFo
     // Add fixed merchant ID to the form data
     onSubmit({
       ...data,
-      merchantId: "xxxxx-xxxxx-xxxxx"
+      merchantId: "5ce32d6e-2140-413a-935d-dbbb74c65439"
     });
   };
 

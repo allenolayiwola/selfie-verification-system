@@ -287,7 +287,7 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const { pinNumber, imageData } = req.body;
-    const merchantId = "xxxxx-xxxxx-xxxxx"; // Fixed merchant ID
+    const merchantId = "5ce32d6e-2140-413a-935d-dbbb74c65439"; // Fixed merchant ID
 
     // Validate image size
     const base64Size = (imageData.length * 3) / 4;
