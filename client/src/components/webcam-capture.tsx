@@ -21,6 +21,7 @@ const MAX_HEAD_TILT_ANGLE = 15;
 const MIN_FACE_SIZE = 0.3;
 const MAX_FACE_SIZE = 0.7;
 const MAX_FACES_ALLOWED = 4;
+const GLASSES_DETECTION_THRESHOLD = 0.7; // Threshold for glasses detection confidence
 
 // Add compression utility function
 const compressImage = (imageSrc: string): Promise<string> => {
@@ -68,6 +69,7 @@ interface FacePosition {
   width: number;
   height: number;
   expression?: string;
+  hasGlasses?: boolean;
 }
 
 interface ImageQuality {
@@ -100,8 +102,9 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     contrast: number;
     isGood: boolean;
   }>({ brightness: 0, contrast: 0, isGood: false });
+  const [glassesDetected, setGlassesDetected] = useState(false);
 
-  // Initialize face detector
+
   useEffect(() => {
     const loadModel = async () => {
       await tf.ready();
@@ -110,8 +113,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         {
           runtime: 'tfjs',
           modelType: 'full',
-          maxFaces: MAX_FACES_ALLOWED,
-          refineLandmarks: true
+          maxFaces: MAX_FACES_ALLOWED
         }
       );
       setFaceDetector(model);
@@ -119,7 +121,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     loadModel();
   }, []);
 
-  // Function to detect expressions based on face landmarks
   const detectExpression = (face: any): string => {
     if (!face.keypoints || face.keypoints.length === 0) {
       console.log('No keypoints found in face detection');
@@ -127,7 +128,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     }
 
     try {
-      // Log keypoints for debugging
       console.log('Face keypoints:', face.keypoints);
 
       const mouthBottom = face.keypoints.find((kp: any) => kp.name === 'mouthBottom');
@@ -136,14 +136,11 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       const leftMouth = face.keypoints.find((kp: any) => kp.name === 'mouthLeft');
 
       if (mouthBottom && mouthTop && rightMouth && leftMouth) {
-        // Calculate mouth height and width
         const mouthHeight = Math.abs(mouthBottom.y - mouthTop.y);
         const mouthWidth = Math.abs(rightMouth.x - leftMouth.x);
 
-        // Calculate mouth aspect ratio
         const mouthRatio = mouthWidth / mouthHeight;
 
-        // A wider mouth typically indicates a smile
         return mouthRatio > 2.0 ? 'smiling' : 'neutral';
       }
 
@@ -154,6 +151,65 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     }
   };
 
+  const detectGlasses = (face: any): boolean => {
+    if (!face.keypoints) return false;
+
+    try {
+      const leftEye = face.keypoints.find((kp: any) => kp.name === 'leftEye');
+      const rightEye = face.keypoints.find((kp: any) => kp.name === 'rightEye');
+      const leftEyebrow = face.keypoints.find((kp: any) => kp.name === 'leftEyebrow');
+      const rightEyebrow = face.keypoints.find((kp: any) => kp.name === 'rightEyebrow');
+
+      if (leftEye && rightEye && leftEyebrow && rightEyebrow) {
+        const leftEyeDistance = Math.abs(leftEye.y - leftEyebrow.y);
+        const rightEyeDistance = Math.abs(rightEye.y - rightEyebrow.y);
+
+        const averageDistance = (leftEyeDistance + rightEyeDistance) / 2;
+        return averageDistance > GLASSES_DETECTION_THRESHOLD;
+      }
+      return false;
+    } catch (error) {
+      console.error('Glasses detection error:', error);
+      return false;
+    }
+  };
+
+  const analyzeImageQuality = useCallback((face: FacePosition) => {
+    const centerX = CAPTURE_WIDTH / 2;
+    const centerY = CAPTURE_HEIGHT / 2;
+    const faceCenter = {
+      x: face.x + face.width / 2,
+      y: face.y + face.height / 2
+    };
+
+    const isCentered =
+      Math.abs(faceCenter.x - centerX) < CAPTURE_WIDTH * 0.1 &&
+      Math.abs(faceCenter.y - centerY) < CAPTURE_HEIGHT * 0.1;
+
+    const faceWidthRatio = face.width / CAPTURE_WIDTH;
+    const isRightSize =
+      faceWidthRatio >= MIN_FACE_SIZE &&
+      faceWidthRatio <= MAX_FACE_SIZE;
+
+    const isStraight = true;
+    const isSharp = true;
+
+    const score = [
+      isCentered,
+      isRightSize,
+      isStraight,
+      isSharp
+    ].filter(Boolean).length * 25;
+
+    return {
+      isCentered,
+      isRightSize,
+      isStraight,
+      isSharp,
+      score
+    };
+  }, []);
+
   const detectFaces = useCallback(async () => {
     if (!faceDetector || !webcamRef.current) return;
 
@@ -162,17 +218,22 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
     try {
       const faces = await faceDetector.estimateFaces(video);
-      const detectedFaces = faces.map(face => ({
-        x: face.box.xMin,
-        y: face.box.yMin,
-        width: face.box.width,
-        height: face.box.height,
-        expression: detectExpression(face)
-      }));
+      const detectedFaces = faces.map(face => {
+        const hasGlasses = detectGlasses(face);
+        return {
+          x: face.box.xMin,
+          y: face.box.yMin,
+          width: face.box.width,
+          height: face.box.height,
+          expression: detectExpression(face),
+          hasGlasses
+        };
+      });
 
       setFacePositions(detectedFaces);
       setFaceDetected(detectedFaces.length > 0);
       setMultipleFaces(detectedFaces.length > 1);
+      setGlassesDetected(detectedFaces.some(face => face.hasGlasses));
 
       if (detectedFaces.length > 0) {
         const primaryFace = detectedFaces[0];
@@ -194,7 +255,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     } catch (error) {
       console.error('Face detection error:', error);
     }
-  }, [faceDetector, detectExpression]);
+  }, [faceDetector, detectExpression, detectGlasses, analyzeImageQuality]);
 
   const analyzeLighting = (imageData: string) => {
     return new Promise<{ brightness: number; contrast: number }>((resolve) => {
@@ -234,41 +295,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     });
   };
 
-  const analyzeImageQuality = useCallback((face: FacePosition) => {
-    const centerX = CAPTURE_WIDTH / 2;
-    const centerY = CAPTURE_HEIGHT / 2;
-    const faceCenter = {
-      x: face.x + face.width / 2,
-      y: face.y + face.height / 2
-    };
-
-    const isCentered =
-      Math.abs(faceCenter.x - centerX) < CAPTURE_WIDTH * 0.1 &&
-      Math.abs(faceCenter.y - centerY) < CAPTURE_HEIGHT * 0.1;
-
-    const faceWidthRatio = face.width / CAPTURE_WIDTH;
-    const isRightSize =
-      faceWidthRatio >= MIN_FACE_SIZE &&
-      faceWidthRatio <= MAX_FACE_SIZE;
-
-    const isStraight = true;
-    const isSharp = true;
-
-    const score = [
-      isCentered,
-      isRightSize,
-      isStraight,
-      isSharp
-    ].filter(Boolean).length * 25;
-
-    return {
-      isCentered,
-      isRightSize,
-      isStraight,
-      isSharp,
-      score
-    };
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(detectFaces, 100);
@@ -296,8 +322,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     setError(null);
     const imageSrc = webcamRef.current?.getScreenshot({
       width: CAPTURE_WIDTH,
-      height: CAPTURE_HEIGHT,
-      type: "image/png"
+      height: CAPTURE_HEIGHT
     });
 
     if (!imageSrc) {
@@ -306,7 +331,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     }
 
     try {
-      // Compress the image before further processing
       const compressedImage = await compressImage(imageSrc);
 
       if (!faceDetected) {
@@ -514,6 +538,10 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
                     <span className="text-xs">{faceDetected ? 'Face Detected' : 'No Face Found'}</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${glassesDetected ? 'bg-red-500' : 'bg-green-500'}`} />
+                    <span className="text-xs">{glassesDetected ? 'Glasses Detected' : 'No Glasses'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <span className="text-xs">{isLive ? 'Liveness Confirmed' : 'Checking Liveness'}</span>
                   </div>
@@ -528,6 +556,15 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {glassesDetected && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Please remove glasses before capturing photo
+          </AlertDescription>
         </Alert>
       )}
 
@@ -551,7 +588,8 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
                 !faceDetected ||
                 !isLive ||
                 imageQuality.score < 75 ||
-                facePositions.length > MAX_FACES_ALLOWED
+                facePositions.length > MAX_FACES_ALLOWED ||
+                glassesDetected
               }
             >
               <Camera className="w-4 h-4 mr-2" />
@@ -560,7 +598,8 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
                   !lightingStatus.isGood ? "Adjust Lighting" :
                     imageQuality.score < 75 ? "Follow Guidelines" :
                       facePositions.length > MAX_FACES_ALLOWED ? "Too Many Faces" :
-                        "Capture Photo"}
+                        glassesDetected ? "Remove Glasses" :
+                          "Capture Photo"}
             </Button>
             <Button variant="outline" onClick={() => webcamRef.current?.getScreenshot()}>
               <RefreshCw className="w-4 h-4" />
