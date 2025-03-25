@@ -14,8 +14,9 @@ import fetch from 'node-fetch';
 const scryptAsync = promisify(scrypt);
 
 export function registerRoutes(app: Express): Server {
-  // Configure express with default limits
+  // Configure express with 1MB limits
   app.use(express.json({
+    limit: '1mb',
     strict: true,
     verify: (req: any, _res, buf, encoding) => {
       // Log request size for debugging
@@ -29,6 +30,7 @@ export function registerRoutes(app: Express): Server {
   }));
 
   app.use(express.urlencoded({
+    limit: '1mb',
     extended: true
   }));
 
@@ -45,7 +47,7 @@ export function registerRoutes(app: Express): Server {
       if (err.type === 'entity.too.large' || (err instanceof SyntaxError && err.status === 413)) {
         return res.status(413).json({
           error: "Request entity too large",
-          details: "The uploaded file exceeds the default size limit"
+          details: "The uploaded file exceeds the size limit of 1MB"
         });
       }
     }
