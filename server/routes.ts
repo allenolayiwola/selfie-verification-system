@@ -9,6 +9,7 @@ import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import fetch from 'node-fetch';
 
 const scryptAsync = promisify(scrypt);
 
@@ -282,12 +283,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Submit verification endpoint
+  // Update submit verification endpoint
   app.post("/api/verify", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const { pinNumber, imageData } = req.body;
-    const merchantId = "5ce32d6e-2140-413a-935d-dbbb74c65439"; // Fixed merchant ID
+    const merchantId = "5ce32d6e-2140-413a-935d-dbbb74c65439";
 
     // Validate image size
     const base64Size = (imageData.length * 3) / 4;
@@ -301,19 +302,60 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      // Prepare data for external API
+      const externalApiData = {
+        merchant_id: merchantId,
+        pin_number: pinNumber,
+        image_data: imageData.split(',')[1] // Remove data:image/png;base64, prefix
+      };
+
+      // Call external API
+      const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(externalApiData)
+      });
+
+      const responseData = await apiResponse.json();
+
+      // Store verification attempt in database for logging
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
         merchantId,
         pinNumber,
-        imageData: imageData.split(',')[1], // Remove data:image/png;base64, prefix
-        status: "pending",
-        response: null
+        imageData: imageData.split(',')[1],
+        status: apiResponse.ok ? "pending" : "failed",
+        response: JSON.stringify(responseData)
       }).returning();
 
-      res.json(verification);
+      // Return the API response to client
+      if (!apiResponse.ok) {
+        return res.status(apiResponse.status).json({
+          error: "External verification failed",
+          details: responseData
+        });
+      }
+
+      res.json(responseData);
     } catch (error) {
       console.error('Verification error:', error);
-      res.status(500).json({ error: "Verification failed" });
+
+      // Log failed attempt
+      await db.insert(verifications).values({
+        userId: req.user.id,
+        merchantId,
+        pinNumber,
+        imageData: imageData.split(',')[1],
+        status: "failed",
+        response: error.message
+      });
+
+      res.status(500).json({ 
+        error: "Verification failed",
+        details: error.message
+      });
     }
   });
 
