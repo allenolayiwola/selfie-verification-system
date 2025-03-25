@@ -16,7 +16,7 @@ const scryptAsync = promisify(scrypt);
 export function registerRoutes(app: Express): Server {
   // Configure express to handle larger payloads first, before any route handling
   app.use(express.json({
-    limit: '5mb',
+    limit: '50mb', // Increased limit
     strict: true,
     verify: (req: any, _res, buf, encoding) => {
       // Log request size for debugging
@@ -29,9 +29,20 @@ export function registerRoutes(app: Express): Server {
   }));
 
   app.use(express.urlencoded({
-    limit: '5mb',
+    limit: '50mb', // Increased limit
     extended: true
   }));
+
+  // Error handling middleware for payload size errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err instanceof SyntaxError && err.status === 413) {
+      return res.status(413).json({
+        error: "Request entity too large",
+        details: "The uploaded file exceeds the size limit"
+      });
+    }
+    next(err);
+  });
 
   // Passport configuration
   passport.use(new LocalStrategy(async (username, password, done) => {
