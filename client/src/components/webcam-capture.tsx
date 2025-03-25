@@ -9,7 +9,7 @@ import * as faceDetection from '@tensorflow-models/face-detection';
 
 const CAPTURE_WIDTH = 640;
 const CAPTURE_HEIGHT = 480;
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes (matching API limit)
+const MAX_FILE_SIZE = 512 * 1024; // 512KB in bytes (half of API limit)
 const MIN_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS = 200;
 const MIN_CONTRAST = 30;
@@ -32,11 +32,11 @@ const compressImage = (imageSrc: string): Promise<string> => {
       const canvas = document.createElement('canvas');
 
       // Start with smaller dimensions to reduce size
-      let width = Math.min(CAPTURE_WIDTH, 640);
-      let height = Math.min(CAPTURE_HEIGHT, 480);
+      let width = Math.min(CAPTURE_WIDTH, 480);
+      let height = Math.min(CAPTURE_HEIGHT, 360);
 
       // If still too large, scale down proportionally
-      const maxDimension = 640;
+      const maxDimension = 480;
       if (width > maxDimension || height > maxDimension) {
         if (width > height) {
           height = Math.round((height * maxDimension) / width);
@@ -64,7 +64,7 @@ const compressImage = (imageSrc: string): Promise<string> => {
       ctx.drawImage(img, 0, 0, width, height);
 
       // Try different quality levels if needed
-      let quality = 0.8; // Start with lower quality
+      let quality = 0.6; // Start with lower quality
       let compressedImage = canvas.toDataURL('image/png', quality);
       let base64Size = (compressedImage.length * 3) / 4;
 
@@ -76,7 +76,7 @@ const compressImage = (imageSrc: string): Promise<string> => {
       }
 
       if (base64Size > MAX_FILE_SIZE) {
-        reject(new Error(`Image size (${(base64Size / 1024 / 1024).toFixed(2)}MB) exceeds 1MB limit even after compression. Try moving closer to the camera or ensuring better lighting.`));
+        reject(new Error(`Image size (${(base64Size / 1024).toFixed(2)}KB) exceeds 512KB limit even after compression. Try moving closer to the camera or ensuring better lighting.`));
         return;
       }
 
