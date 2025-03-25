@@ -287,7 +287,7 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const { pinNumber, imageData } = req.body;
-    const merchantId = "5ce32d6e-2140-413a-935d-dbbb74c65439";
+    const merchantCode = "5ce32d6e-2140-413a-935d-dbbb74c65439";
 
     try {
       // Validate the image data
@@ -309,7 +309,7 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
-        merchant_id: merchantId,
+        merchantCode,
         imageSize: base64Data.length
       });
 
@@ -320,9 +320,9 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          merchant_id: merchantId,
-          pin_number: pinNumber,
-          image_data: base64Data // Send properly formatted base64 data
+          pin: pinNumber,
+          image: base64Data,
+          merchantCode
         })
       });
 
@@ -332,7 +332,7 @@ export function registerRoutes(app: Express): Server {
       // Store verification metadata (without image data) in database
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
-        merchantId,
+        merchantId: merchantCode,
         pinNumber,
         imageData: null,
         status: apiResponse.ok ? "pending" : "rejected",
