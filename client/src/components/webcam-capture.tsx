@@ -31,12 +31,12 @@ const compressImage = (imageSrc: string): Promise<string> => {
       // Create temporary canvas for compression
       const canvas = document.createElement('canvas');
 
-      // Start with original dimensions
-      let width = CAPTURE_WIDTH;
-      let height = CAPTURE_HEIGHT;
+      // Start with smaller dimensions to reduce size
+      let width = Math.min(CAPTURE_WIDTH, 640);
+      let height = Math.min(CAPTURE_HEIGHT, 480);
 
-      // If image is too large, scale it down while maintaining aspect ratio
-      const maxDimension = 800;
+      // If still too large, scale down proportionally
+      const maxDimension = 640;
       if (width > maxDimension || height > maxDimension) {
         if (width > height) {
           height = Math.round((height * maxDimension) / width);
@@ -60,11 +60,11 @@ const compressImage = (imageSrc: string): Promise<string> => {
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Draw and compress image
+      // Draw image with reduced dimensions
       ctx.drawImage(img, 0, 0, width, height);
 
       // Try different quality levels if needed
-      let quality = 1.0;
+      let quality = 0.8; // Start with lower quality
       let compressedImage = canvas.toDataURL('image/png', quality);
       let base64Size = (compressedImage.length * 3) / 4;
 
@@ -76,7 +76,7 @@ const compressImage = (imageSrc: string): Promise<string> => {
       }
 
       if (base64Size > MAX_FILE_SIZE) {
-        reject(new Error('Unable to compress image below 1MB while maintaining quality'));
+        reject(new Error(`Image size (${(base64Size / 1024 / 1024).toFixed(2)}MB) exceeds 1MB limit even after compression. Try moving closer to the camera or ensuring better lighting.`));
         return;
       }
 
