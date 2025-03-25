@@ -72,7 +72,7 @@ export default function VerificationPage() {
 
     verifyMutation.mutate({
       ...formData,
-      imageData: capturedImage.split(",")[1], // Remove data:image/png;base64, prefix
+      imageData: capturedImage, // Send the raw base64 data without splitting
     });
   };
 

@@ -283,7 +283,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update submit verification endpoint
   app.post("/api/verify", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
@@ -291,13 +290,20 @@ export function registerRoutes(app: Express): Server {
     const merchantId = "5ce32d6e-2140-413a-935d-dbbb74c65439";
 
     try {
-      // Store verification attempt in database before external API call
+      // Validate the image data
+      if (!imageData) {
+        return res.status(400).json({ error: "Image data is required" });
+      }
+
+      console.log('Image data length:', imageData.length);
+
+      // Store verification attempt in database
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
         merchantId,
         pinNumber,
-        imageData, // Store the raw base64 data
-        status: "pending", // Use a valid status from the schema
+        imageData,
+        status: "pending",
         response: null
       }).returning();
 
@@ -316,7 +322,7 @@ export function registerRoutes(app: Express): Server {
         body: JSON.stringify({
           merchant_id: merchantId,
           pin_number: pinNumber,
-          image_data: imageData // Send the base64 data directly
+          image_data: imageData
         })
       });
 
@@ -343,7 +349,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) { // Type assertion to avoid TS error
       console.error('Verification error:', error);
 
-      // Update verification with error if it exists
       res.status(500).json({
         error: "Verification failed",
         details: error.message
