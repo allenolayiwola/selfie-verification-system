@@ -31,12 +31,12 @@ const compressImage = (imageSrc: string): Promise<string> => {
       // Create temporary canvas for compression
       const canvas = document.createElement('canvas');
 
-      // Start with smaller dimensions to reduce size
-      let width = Math.min(CAPTURE_WIDTH, 480);
-      let height = Math.min(CAPTURE_HEIGHT, 360);
+      // Start with smaller dimensions
+      let width = Math.min(CAPTURE_WIDTH, 320);
+      let height = Math.min(CAPTURE_HEIGHT, 240);
 
       // If still too large, scale down proportionally
-      const maxDimension = 480;
+      const maxDimension = 320;
       if (width > maxDimension || height > maxDimension) {
         if (width > height) {
           height = Math.round((height * maxDimension) / width);
@@ -64,7 +64,7 @@ const compressImage = (imageSrc: string): Promise<string> => {
       ctx.drawImage(img, 0, 0, width, height);
 
       // Try different quality levels if needed
-      let quality = 0.6; // Start with lower quality
+      let quality = 0.4; // Start with lower quality
       let compressedImage = canvas.toDataURL('image/png', quality);
       let base64Size = (compressedImage.length * 3) / 4;
 

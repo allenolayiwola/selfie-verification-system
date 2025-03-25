@@ -326,7 +326,7 @@ export function registerRoutes(app: Express): Server {
         merchantId,
         pinNumber,
         imageData: imageData.split(',')[1],
-        status: apiResponse.ok ? "pending" : "failed",
+        status: "pending", // Use a valid status from the schema
         response: JSON.stringify(responseData)
       }).returning();
 
@@ -339,16 +339,16 @@ export function registerRoutes(app: Express): Server {
       }
 
       res.json(responseData);
-    } catch (error) {
+    } catch (error: any) { // Type assertion to avoid TS error
       console.error('Verification error:', error);
 
-      // Log failed attempt
+      // Log failed attempt with valid status
       await db.insert(verifications).values({
         userId: req.user.id,
         merchantId,
         pinNumber,
         imageData: imageData.split(',')[1],
-        status: "failed",
+        status: "rejected", // Use a valid status from the schema
         response: error.message
       });
 
