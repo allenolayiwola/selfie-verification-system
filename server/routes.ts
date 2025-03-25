@@ -309,6 +309,12 @@ export function registerRoutes(app: Express): Server {
         image_data: imageData.split(',')[1] // Remove data:image/png;base64, prefix
       };
 
+      console.log('Sending verification to external API:', {
+        url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
+        merchant_id: merchantId,
+        imageSize: externalApiData.image_data.length
+      });
+
       // Call external API
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
         method: 'POST',
@@ -319,6 +325,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       const responseData = await apiResponse.json();
+      console.log('External API response:', responseData);
 
       // Store verification attempt in database for logging
       const [verification] = await db.insert(verifications).values({
@@ -352,7 +359,7 @@ export function registerRoutes(app: Express): Server {
         response: error.message
       });
 
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Verification failed",
         details: error.message
       });
