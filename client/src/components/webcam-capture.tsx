@@ -82,6 +82,14 @@ const compressImage = (imageSrc: string): Promise<string> => {
 
       // Convert to base64 without the data URL prefix
       const base64Data = compressedImage.split(',')[1];
+      console.log('Image compression details:', {
+        originalSize: imageSrc.length,
+        compressedSize: base64Data.length,
+        width,
+        height,
+        quality
+      });
+
       resolve(base64Data);
     };
 

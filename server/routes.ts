@@ -351,7 +351,7 @@ export function registerRoutes(app: Express): Server {
         },
         body: JSON.stringify({
           pin: pinNumber,
-          image: base64Data,
+          image: base64Data, // Send the raw base64 data
           merchantCode
         })
       });
