@@ -13,23 +13,25 @@ import fetch from 'node-fetch';
 
 const scryptAsync = promisify(scrypt);
 
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
-
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return hashedBuf.equals(suppliedBuf);
-}
-
 export function registerRoutes(app: Express): Server {
-  // Configure express to handle larger payloads up to 5MB
-  app.use(express.json({ limit: '5mb', strict: true }));
-  app.use(express.urlencoded({ limit: '5mb', extended: true }));
+  // Configure express to handle larger payloads first, before any route handling
+  app.use(express.json({
+    limit: '5mb',
+    strict: true,
+    verify: (req: any, _res, buf, encoding) => {
+      // Log request size for debugging
+      const contentLength = buf.length;
+      console.log('Request body size:', {
+        size: contentLength,
+        sizeInMB: (contentLength / (1024 * 1024)).toFixed(2) + 'MB'
+      });
+    }
+  }));
+
+  app.use(express.urlencoded({
+    limit: '5mb',
+    extended: true
+  }));
 
   // Passport configuration
   passport.use(new LocalStrategy(async (username, password, done) => {
@@ -295,17 +297,24 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Image data is required" });
       }
 
-      // Log the image data format for debugging
-      console.log('Image data format check:', {
-        starts_with_data_url: imageData.startsWith('data:image/png;base64,'),
-        length: imageData.length,
-        sample: imageData.substring(0, 50) + '...' // Log the start of the string
+      // Log request size and format details
+      console.log('Verification request details:', {
+        contentLength: req.headers['content-length'],
+        contentType: req.headers['content-type'],
+        imageDataLength: imageData.length,
+        imageSizeInMB: (imageData.length / (1024 * 1024)).toFixed(2) + 'MB'
       });
 
       // Ensure we have the correct base64 format
       const base64Data = imageData.startsWith('data:image/png;base64,')
         ? imageData.split(',')[1]
         : imageData;
+
+      console.log('Base64 data details:', {
+        originalLength: imageData.length,
+        processedLength: base64Data.length,
+        processedSizeInMB: (base64Data.length / (1024 * 1024)).toFixed(2) + 'MB'
+      });
 
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
@@ -420,4 +429,17 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
   return httpServer;
+}
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+async function comparePasswords(supplied: string, stored: string) {
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return hashedBuf.equals(suppliedBuf);
 }
