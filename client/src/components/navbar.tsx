@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Shield, Camera, LogOut, Users, LayoutDashboard, FileBarChart } from "lucide-react";
+import { Shield, Camera, LogOut, Users, LayoutDashboard, FileBarChart, History } from "lucide-react";
 
 export default function Navbar() {
   const { user, logoutMutation } = useAuth();
@@ -66,6 +66,13 @@ export default function Navbar() {
                 </span>
               </Link>
               <Separator orientation="vertical" className="h-6 mx-1" />
+              <Link href="/history">
+                <span className="flex items-center gap-2 px-4 text-sm font-medium text-blue-600 hover:text-orange-500 transition-colors">
+                  <History className="h-4 w-4" />
+                  Verification History
+                </span>
+              </Link>
+              <Separator orientation="vertical" className="h-6 mx-1" />
               <Link href="/admin">
                 <span className="flex items-center gap-2 px-4 text-sm font-medium text-blue-600 hover:text-orange-500 transition-colors">
                   <FileBarChart className="h-4 w-4" />
@@ -108,6 +115,12 @@ export default function Navbar() {
                 <span className="flex flex-col items-center gap-1 text-xs font-medium text-blue-600 hover:text-orange-500 transition-colors">
                   <Users className="h-5 w-5" />
                   Users
+                </span>
+              </Link>
+              <Link href="/history">
+                <span className="flex flex-col items-center gap-1 text-xs font-medium text-blue-600 hover:text-orange-500 transition-colors">
+                  <History className="h-5 w-5" />
+                  History
                 </span>
               </Link>
               <Link href="/admin">
