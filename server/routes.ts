@@ -295,25 +295,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Image data is required" });
       }
 
-      console.log('Image data length:', imageData.length);
-
-      // Store verification attempt in database
-      const [verification] = await db.insert(verifications).values({
-        userId: req.user.id,
-        merchantId,
-        pinNumber,
-        imageData,
-        status: "pending",
-        response: null
-      }).returning();
-
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
         merchant_id: merchantId,
         imageSize: imageData.length
       });
 
-      // Call external API
+      // Call external API first
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
         method: 'POST',
         headers: {
@@ -329,15 +317,16 @@ export function registerRoutes(app: Express): Server {
       const responseData = await apiResponse.json();
       console.log('External API response:', responseData);
 
-      // Update verification with API response
-      await db.update(verifications)
-        .set({
-          status: apiResponse.ok ? "pending" : "rejected",
-          response: JSON.stringify(responseData)
-        })
-        .where(eq(verifications.id, verification.id));
+      // Store verification metadata (without image data) in database
+      const [verification] = await db.insert(verifications).values({
+        userId: req.user.id,
+        merchantId,
+        pinNumber,
+        imageData: null, // Don't store the image data
+        status: apiResponse.ok ? "pending" : "rejected",
+        response: JSON.stringify(responseData)
+      }).returning();
 
-      // Return the API response to client
       if (!apiResponse.ok) {
         return res.status(apiResponse.status).json({
           error: "External verification failed",
@@ -346,7 +335,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       res.json(responseData);
-    } catch (error: any) { // Type assertion to avoid TS error
+    } catch (error: any) {
       console.error('Verification error:', error);
 
       res.status(500).json({
