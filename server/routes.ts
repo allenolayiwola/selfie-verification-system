@@ -295,13 +295,25 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Image data is required" });
       }
 
+      // Log the image data format for debugging
+      console.log('Image data format check:', {
+        starts_with_data_url: imageData.startsWith('data:image/png;base64,'),
+        length: imageData.length,
+        sample: imageData.substring(0, 50) + '...' // Log the start of the string
+      });
+
+      // Ensure we have the correct base64 format
+      const base64Data = imageData.startsWith('data:image/png;base64,')
+        ? imageData.split(',')[1]
+        : imageData;
+
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
         merchant_id: merchantId,
-        imageSize: imageData.length
+        imageSize: base64Data.length
       });
 
-      // Call external API first
+      // Call external API
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
         method: 'POST',
         headers: {
@@ -310,7 +322,7 @@ export function registerRoutes(app: Express): Server {
         body: JSON.stringify({
           merchant_id: merchantId,
           pin_number: pinNumber,
-          image_data: imageData
+          image_data: base64Data // Send properly formatted base64 data
         })
       });
 
@@ -322,7 +334,7 @@ export function registerRoutes(app: Express): Server {
         userId: req.user.id,
         merchantId,
         pinNumber,
-        imageData: null, // Don't store the image data
+        imageData: null,
         status: apiResponse.ok ? "pending" : "rejected",
         response: JSON.stringify(responseData)
       }).returning();
