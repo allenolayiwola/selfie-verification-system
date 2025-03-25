@@ -290,18 +290,44 @@ export function registerRoutes(app: Express): Server {
     const { pinNumber, imageData } = req.body;
     const merchantId = "5ce32d6e-2140-413a-935d-dbbb74c65439";
 
-    // Validate image size
-    const base64Size = (imageData.length * 3) / 4;
-    if (base64Size > 1024 * 1024) { // 1MB limit
-      return res.status(400).json({ error: "Image size exceeds 1MB limit" });
-    }
-
-    // Validate image format
-    if (!imageData.startsWith('data:image/png;base64,')) {
-      return res.status(400).json({ error: "Invalid image format. PNG required." });
-    }
-
     try {
+      // Store verification attempt in database before external API call
+      const [verification] = await db.insert(verifications).values({
+        userId: req.user.id,
+        merchantId,
+        pinNumber,
+        imageData: imageData.split(',')[1], // Remove data:image/png;base64, prefix
+        status: "pending", // Use a valid status from the schema
+        response: null
+      }).returning();
+
+      // Validate image size
+      const base64Size = (imageData.length * 3) / 4;
+      if (base64Size > 1024 * 1024) { // 1MB limit
+        // Update verification with error
+        await db.update(verifications)
+          .set({ 
+            status: "rejected",
+            response: "Image size exceeds 1MB limit"
+          })
+          .where(eq(verifications.id, verification.id));
+
+        return res.status(400).json({ error: "Image size exceeds 1MB limit" });
+      }
+
+      // Validate image format
+      if (!imageData.startsWith('data:image/png;base64,')) {
+        // Update verification with error
+        await db.update(verifications)
+          .set({ 
+            status: "rejected",
+            response: "Invalid image format. PNG required."
+          })
+          .where(eq(verifications.id, verification.id));
+
+        return res.status(400).json({ error: "Invalid image format. PNG required." });
+      }
+
       // Prepare data for external API
       const externalApiData = {
         merchant_id: merchantId,
@@ -327,15 +353,13 @@ export function registerRoutes(app: Express): Server {
       const responseData = await apiResponse.json();
       console.log('External API response:', responseData);
 
-      // Store verification attempt in database for logging
-      const [verification] = await db.insert(verifications).values({
-        userId: req.user.id,
-        merchantId,
-        pinNumber,
-        imageData: imageData.split(',')[1],
-        status: "pending", // Use a valid status from the schema
-        response: JSON.stringify(responseData)
-      }).returning();
+      // Update verification with API response
+      await db.update(verifications)
+        .set({
+          status: apiResponse.ok ? "pending" : "rejected",
+          response: JSON.stringify(responseData)
+        })
+        .where(eq(verifications.id, verification.id));
 
       // Return the API response to client
       if (!apiResponse.ok) {
@@ -349,15 +373,7 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) { // Type assertion to avoid TS error
       console.error('Verification error:', error);
 
-      // Log failed attempt with valid status
-      await db.insert(verifications).values({
-        userId: req.user.id,
-        merchantId,
-        pinNumber,
-        imageData: imageData.split(',')[1],
-        status: "rejected", // Use a valid status from the schema
-        response: error.message
-      });
+      // Update verification with error if it exists
 
       res.status(500).json({
         error: "Verification failed",
