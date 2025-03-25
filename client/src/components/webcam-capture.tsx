@@ -9,7 +9,7 @@ import * as faceDetection from '@tensorflow-models/face-detection';
 
 const CAPTURE_WIDTH = 640;
 const CAPTURE_HEIGHT = 480;
-const MAX_FILE_SIZE = 512 * 1024; // 512KB in bytes (half of API limit)
+const MAX_FILE_SIZE = 512 * 1024; // 512KB in bytes
 const MIN_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS = 200;
 const MIN_CONTRAST = 30;
@@ -32,11 +32,11 @@ const compressImage = (imageSrc: string): Promise<string> => {
       const canvas = document.createElement('canvas');
 
       // Start with smaller dimensions
-      let width = Math.min(CAPTURE_WIDTH, 320);
-      let height = Math.min(CAPTURE_HEIGHT, 240);
+      let width = Math.min(CAPTURE_WIDTH, 240);
+      let height = Math.min(CAPTURE_HEIGHT, 180);
 
       // If still too large, scale down proportionally
-      const maxDimension = 320;
+      const maxDimension = 240;
       if (width > maxDimension || height > maxDimension) {
         if (width > height) {
           height = Math.round((height * maxDimension) / width);
@@ -76,7 +76,7 @@ const compressImage = (imageSrc: string): Promise<string> => {
       }
 
       if (base64Size > MAX_FILE_SIZE) {
-        reject(new Error(`Image size (${(base64Size / 1024).toFixed(2)}KB) exceeds 512KB limit even after compression. Try moving closer to the camera or ensuring better lighting.`));
+        reject(new Error(`Image size (${(base64Size / 1024).toFixed(2)}KB) exceeds 512KB limit. Try moving closer to the camera or ensuring better lighting.`));
         return;
       }
 
