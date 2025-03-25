@@ -16,30 +16,40 @@ const scryptAsync = promisify(scrypt);
 export function registerRoutes(app: Express): Server {
   // Configure express to handle larger payloads first, before any route handling
   app.use(express.json({
-    limit: '50mb', // Increased limit
+    limit: '25mb', // Increased limit to 25MB
     strict: true,
     verify: (req: any, _res, buf, encoding) => {
       // Log request size for debugging
       const contentLength = buf.length;
       console.log('Request body size:', {
         size: contentLength,
-        sizeInMB: (contentLength / (1024 * 1024)).toFixed(2) + 'MB'
+        sizeInMB: (contentLength / (1024 * 1024)).toFixed(2) + 'MB',
+        contentType: req.headers['content-type']
       });
     }
   }));
 
   app.use(express.urlencoded({
-    limit: '50mb', // Increased limit
+    limit: '25mb', // Increased limit to 25MB
     extended: true
   }));
 
   // Error handling middleware for payload size errors
   app.use((err: any, req: any, res: any, next: any) => {
-    if (err instanceof SyntaxError && err.status === 413) {
-      return res.status(413).json({
-        error: "Request entity too large",
-        details: "The uploaded file exceeds the size limit"
+    if (err) {
+      console.error('Express middleware error:', {
+        name: err.name,
+        message: err.message,
+        type: err.type,
+        status: err.status
       });
+
+      if (err.type === 'entity.too.large' || (err instanceof SyntaxError && err.status === 413)) {
+        return res.status(413).json({
+          error: "Request entity too large",
+          details: "The uploaded file exceeds the size limit of 25MB"
+        });
+      }
     }
     next(err);
   });
