@@ -23,7 +23,7 @@ const MAX_FACE_SIZE = 0.7;
 const MAX_FACES_ALLOWED = 4;
 const GLASSES_DETECTION_THRESHOLD = 0.7; // Threshold for glasses detection confidence
 
-// Update compression function
+// Update the image capture and compression function
 const compressImage = (imageSrc: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -80,7 +80,9 @@ const compressImage = (imageSrc: string): Promise<string> => {
         return;
       }
 
-      resolve(compressedImage);
+      // Convert to base64 without the data URL prefix
+      const base64Data = compressedImage.split(',')[1];
+      resolve(base64Data);
     };
 
     img.onerror = () => reject(new Error('Failed to load image'));
@@ -451,7 +453,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         return;
       }
 
-      const { brightness, contrast } = await analyzeLighting(compressedImage);
+      const { brightness, contrast } = await analyzeLighting(imageSrc); // analyzeLighting should use original imageSrc, not compressed
       if (brightness < MIN_BRIGHTNESS || brightness > MAX_BRIGHTNESS) {
         setError("Poor lighting conditions. Please adjust lighting.");
         return;
@@ -497,7 +499,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         ) : (
           <div className="relative">
             <img
-              src={capturedImage}
+              src={`data:image/png;base64,${capturedImage}`} // Add data URL prefix back for display
               alt="Captured"
               className="w-full h-auto"
             />

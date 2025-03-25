@@ -296,49 +296,15 @@ export function registerRoutes(app: Express): Server {
         userId: req.user.id,
         merchantId,
         pinNumber,
-        imageData: imageData.split(',')[1], // Remove data:image/png;base64, prefix
+        imageData, // Store the raw base64 data
         status: "pending", // Use a valid status from the schema
         response: null
       }).returning();
 
-      // Validate image size
-      const base64Size = (imageData.length * 3) / 4;
-      if (base64Size > 1024 * 1024) { // 1MB limit
-        // Update verification with error
-        await db.update(verifications)
-          .set({ 
-            status: "rejected",
-            response: "Image size exceeds 1MB limit"
-          })
-          .where(eq(verifications.id, verification.id));
-
-        return res.status(400).json({ error: "Image size exceeds 1MB limit" });
-      }
-
-      // Validate image format
-      if (!imageData.startsWith('data:image/png;base64,')) {
-        // Update verification with error
-        await db.update(verifications)
-          .set({ 
-            status: "rejected",
-            response: "Invalid image format. PNG required."
-          })
-          .where(eq(verifications.id, verification.id));
-
-        return res.status(400).json({ error: "Invalid image format. PNG required." });
-      }
-
-      // Prepare data for external API
-      const externalApiData = {
-        merchant_id: merchantId,
-        pin_number: pinNumber,
-        image_data: imageData.split(',')[1] // Remove data:image/png;base64, prefix
-      };
-
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
         merchant_id: merchantId,
-        imageSize: externalApiData.image_data.length
+        imageSize: imageData.length
       });
 
       // Call external API
@@ -347,7 +313,11 @@ export function registerRoutes(app: Express): Server {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(externalApiData)
+        body: JSON.stringify({
+          merchant_id: merchantId,
+          pin_number: pinNumber,
+          image_data: imageData // Send the base64 data directly
+        })
       });
 
       const responseData = await apiResponse.json();
@@ -374,7 +344,6 @@ export function registerRoutes(app: Express): Server {
       console.error('Verification error:', error);
 
       // Update verification with error if it exists
-
       res.status(500).json({
         error: "Verification failed",
         details: error.message
