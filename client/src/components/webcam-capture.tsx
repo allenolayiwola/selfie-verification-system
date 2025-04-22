@@ -132,7 +132,6 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const [imageQuality, setImageQuality] = useState<ImageQuality>({
     isCentered: false,
     isRightSize: false,
-    isRightSize: false,
     isStraight: false,
     isSharp: false,
     score: 0

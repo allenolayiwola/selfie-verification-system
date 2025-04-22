@@ -11,8 +11,7 @@ import passport from "passport";
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Note: JSON and URL-encoded middleware are configured in routes.ts with size limits
 
 // Set trust proxy for production
 if (process.env.NODE_ENV === 'production') {
