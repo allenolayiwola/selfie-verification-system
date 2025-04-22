@@ -19,7 +19,7 @@ export const verifications = pgTable("verifications", {
   userId: integer("user_id").references(() => users.id).notNull(),
   merchantId: text("merchant_id").notNull(),
   pinNumber: text("pin_number").notNull(),
-  imageData: text("image_data").notNull(),
+  imageData: text("image_data"),  // Allow null for image data
   status: text("status", { enum: ["pending", "approved", "rejected"] }).default("pending").notNull(),
   response: text("response"),
   createdAt: timestamp("created_at").defaultNow().notNull()

@@ -19,7 +19,14 @@ import {
 } from "@/components/ui/tooltip";
 
 const verificationFormSchema = z.object({
-  pinNumber: z.string().min(1, "Ghana Card Number is required"),
+  pinNumber: z.string()
+    .min(1, "Ghana Card Number is required")
+    .refine(val => val.trim() !== '', {
+      message: "Ghana Card Number cannot be empty"
+    })
+    .refine(val => /^GHA-\d{8}-\d$/.test(val) || val.length >= 6, {
+      message: "Please enter a valid Ghana Card Number (e.g., GHA-12345678-1)"
+    }),
 });
 
 type VerificationFormData = z.infer<typeof verificationFormSchema>;
@@ -38,11 +45,8 @@ export default function VerificationForm({ onSubmit, isLoading }: VerificationFo
   });
 
   const handleSubmit = (data: VerificationFormData) => {
-    // Add fixed merchant ID to the form data
-    onSubmit({
-      ...data,
-      merchantId: "5ce32d6e-2140-413a-935d-dbbb74c65439"
-    });
+    // The merchantId is handled on the server side
+    onSubmit(data);
   };
 
   return (

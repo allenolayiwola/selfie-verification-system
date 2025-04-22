@@ -41,10 +41,11 @@ export function registerRoutes(app: Express): Server {
         name: err.name,
         message: err.message,
         type: err.type,
-        status: err.status
+        status: err.status || err.statusCode
       });
 
-      if (err.type === 'entity.too.large' || (err instanceof SyntaxError && err.status === 413)) {
+      if (err.type === 'entity.too.large' || 
+          (err instanceof SyntaxError && ((err as any).status === 413 || (err as any).statusCode === 413))) {
         return res.status(413).json({
           error: "Request entity too large",
           details: "The uploaded file exceeds the size limit of 1MB"
@@ -309,12 +310,25 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/verify", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
+    console.log('Verification request received with body keys:', Object.keys(req.body));
+    
     const { pinNumber, imageData } = req.body;
     const merchantCode = "5ce32d6e-2140-413a-935d-dbbb74c65439";
+    
+    console.log('PIN number present:', !!pinNumber, 'Image data present:', !!imageData);
 
     try {
-      // Validate the image data
+      // Validate input data
+      if (!pinNumber || pinNumber.trim() === '') {
+        console.log('PIN number validation failed, received:', pinNumber);
+        return res.status(400).json({ 
+          error: "Ghana Card Number is required",
+          details: "Please provide a valid Ghana Card Number" 
+        });
+      }
+      
       if (!imageData) {
+        console.log('Image data validation failed');
         return res.status(400).json({ error: "Image data is required" });
       }
 
@@ -364,7 +378,7 @@ export function registerRoutes(app: Express): Server {
         userId: req.user.id,
         merchantId: merchantCode,
         pinNumber,
-        imageData: null,
+        imageData: "", // Store empty string instead of null
         status: apiResponse.ok ? "pending" : "rejected",
         response: JSON.stringify(responseData)
       }).returning();
