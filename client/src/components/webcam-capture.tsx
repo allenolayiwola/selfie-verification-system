@@ -30,22 +30,11 @@ const compressImage = (imageSrc: string): Promise<string> => {
     img.onload = () => {
       // Create temporary canvas for compression
       const canvas = document.createElement('canvas');
-
-      // Start with smaller dimensions
-      let width = Math.min(CAPTURE_WIDTH, 240);
-      let height = Math.min(CAPTURE_HEIGHT, 180);
-
-      // If still too large, scale down proportionally
-      const maxDimension = 240;
-      if (width > maxDimension || height > maxDimension) {
-        if (width > height) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        } else {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
-        }
-      }
+      
+      // Maintain the minimum required dimensions (640x480) for API
+      // Do not resize smaller than required minimum
+      let width = CAPTURE_WIDTH;  // 640px
+      let height = CAPTURE_HEIGHT; // 480px
 
       canvas.width = width;
       canvas.height = height;
