@@ -508,7 +508,7 @@ export function registerRoutes(app: Express): Server {
         env: process.env.NODE_ENV,
         database: "connected",
         server: "running",
-        port: 8080
+        port: process.env.PORT || 5000
       });
     } catch (error) {
       console.error('Health check failed:', error);
