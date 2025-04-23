@@ -351,11 +351,30 @@ export function registerRoutes(app: Express): Server {
         processedSizeInMB: (base64Data.length / (1024 * 1024)).toFixed(2) + 'MB'
       });
 
+      // Make sure PIN is properly formatted - important to use "pin" field name exactly
+      console.log('PIN Number raw value:', pinNumber);
+      console.log('PIN Number type:', typeof pinNumber);
+      
+      // Format the request body EXACTLY as required by the API:
+      // {
+      //   "pin": "GHA-xxxxxxxx-x",
+      //   "image": "base 64 image",
+      //   "merchantCode": "xxxxx-xxxxx-xxxxx"
+      // }
+      const requestBody = {
+        pin: pinNumber, // PIN must be sent as "pin" (not pinNumber)
+        image: base64Data, // Send the raw base64 data
+        merchantCode
+      };
+      
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
+        pin: pinNumber.substr(0, 5) + '...',  // Log only first part for privacy
         merchantCode,
         imageSize: base64Data.length
       });
+      
+      console.log('Request body structure:', Object.keys(requestBody));
 
       // Call external API
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
@@ -363,11 +382,7 @@ export function registerRoutes(app: Express): Server {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          pin: pinNumber,
-          image: base64Data, // Send the raw base64 data
-          merchantCode
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const responseData = await apiResponse.json();
