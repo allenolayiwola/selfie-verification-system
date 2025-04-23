@@ -10,6 +10,8 @@ import { promisify } from "util";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import fetch from 'node-fetch';
+import { WebSocketServer } from 'ws';
+import WebSocket from 'ws';
 
 const scryptAsync = promisify(scrypt);
 
@@ -524,12 +526,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
-  // Simple root endpoint for k8s health checks
-  app.get("/", (req, res) => {
-    res.status(200).send("ID Verification System is running");
+  // Root health check endpoint for API only
+  app.get("/api", (req, res) => {
+    res.status(200).send("ID Verification System API is running");
   });
 
   const httpServer = createServer(app);
+  
+  // Add WebSocket server on a different path than Vite's HMR
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    ws.on('message', (message) => {
+      console.log('Received:', message.toString());
+      
+      // Echo back to client for now (can be enhanced later)
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'echo',
+          message: message.toString(),
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+  });
+  
   return httpServer;
 }
 
