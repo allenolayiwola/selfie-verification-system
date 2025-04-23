@@ -382,11 +382,10 @@ export function registerRoutes(app: Express): Server {
       // The API might be expecting the exact format with hyphens included
       // Format: GHA-xxxxxxxx-x
       
-      // Trying a completely different JSON structure based on their error message
-      // Let's try a different field structure and make case-sensitive PIN field
+      // Trying only the lowercase pin field
+      // Specifically only using "pin" as requested
       const requestBody = {
-        PIN: trimmedPinNumber, // Using uppercase PIN as documented
-        pin: trimmedPinNumber, // Also include lowercase for compatibility
+        pin: trimmedPinNumber, // Only include lowercase pin
         image: base64Data,
         merchantKey: merchantKey
       };
