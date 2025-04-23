@@ -374,7 +374,7 @@ export function registerRoutes(app: Express): Server {
       const requestBody = {
         pin: pinNumber.trim(), // Must use "pin" as the exact field name
         image: base64Data, // Send the raw base64 data
-        merchantKey // Changed from merchantCode to merchantKey
+        merchantKey: merchantKey // Explicitly set merchantKey (not shorthand)
       };
       
       console.log('Sending verification to external API:', {
@@ -385,6 +385,13 @@ export function registerRoutes(app: Express): Server {
       });
       
       console.log('Request body structure:', Object.keys(requestBody));
+      
+      // Let's also log the exact field names (crucial for debugging)
+      console.log('Field names exactly as sent:', {
+        hasPinField: 'pin' in requestBody,
+        hasImageField: 'image' in requestBody,
+        hasMerchantKeyField: 'merchantKey' in requestBody
+      });
       
       // For debugging - log the actual JSON being sent (without showing full image data)
       const requestBodyForLog = {
