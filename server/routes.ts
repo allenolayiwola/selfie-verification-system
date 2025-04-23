@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import express from "express";
 import { db } from "@db";
 import { users, verifications, insertUserSchema } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { fromZodError } from "zod-validation-error";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -488,8 +488,7 @@ export function registerRoutes(app: Express): Server {
           userRole: users.role
         })
         .from(verifications)
-        .leftJoin(users, eq(verifications.userId, users.id))
-        .orderBy(desc(verifications.createdAt)); // Most recent first
+        .leftJoin(users, eq(verifications.userId, users.id)); // Get all results (will sort on client side)
       
       res.json(results);
     } catch (error) {

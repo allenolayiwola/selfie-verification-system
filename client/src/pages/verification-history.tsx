@@ -62,8 +62,14 @@ export default function VerificationHistoryPage() {
     queryKey: ["/api/verifications"],
   });
 
+  // Sort verifications by createdAt date in descending order (latest first)
+  const sortedVerifications = verifications 
+    ? [...verifications].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    : [];
+
   // Filter verifications based on search query
-  const filteredVerifications = verifications?.filter(verification => {
+  const filteredVerifications = sortedVerifications.filter(verification => {
     if (!searchQuery) return true;
     
     const query = searchQuery.toLowerCase();
@@ -79,14 +85,14 @@ export default function VerificationHistoryPage() {
 
   // Export verification history as CSV
   const exportCSV = () => {
-    if (!verifications || verifications.length === 0) return;
+    if (!sortedVerifications || sortedVerifications.length === 0) return;
     
     const headers = [
       "ID", "Date", "Username", "Full Name", "Department", 
       "Email", "Role", "PIN Number", "Status", "Response"
     ];
     
-    const csvData = verifications.map(v => [
+    const csvData = sortedVerifications.map(v => [
       v.id,
       format(new Date(v.createdAt), 'yyyy-MM-dd HH:mm:ss'),
       v.username,
@@ -131,7 +137,7 @@ export default function VerificationHistoryPage() {
               <Button 
                 variant="outline"
                 onClick={exportCSV}
-                disabled={!verifications || verifications.length === 0}
+                disabled={!sortedVerifications || sortedVerifications.length === 0}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
