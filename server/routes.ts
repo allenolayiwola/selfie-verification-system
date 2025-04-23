@@ -371,11 +371,17 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Create the exact format required by the API
+      // Try a different format for the PIN field
+      // Looking at the API error "PIN can not be null", let's make sure we're using the format
+      // the API expects exactly
       const requestBody = {
-        pin: pinNumber.trim(), // Must use "pin" as the exact field name
-        image: base64Data, // Send the raw base64 data
-        merchantKey: merchantKey // Explicitly set merchantKey (not shorthand)
+        PIN: pinNumber.trim(), // Try uppercase PIN as field name
+        image: base64Data,
+        merchantKey: merchantKey
       };
+      
+      // Log the exact JSON string that will be sent
+      console.log('Actual JSON string to be sent:', JSON.stringify(requestBody).substring(0, 100) + '...');
       
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
@@ -389,6 +395,7 @@ export function registerRoutes(app: Express): Server {
       // Let's also log the exact field names (crucial for debugging)
       console.log('Field names exactly as sent:', {
         hasPinField: 'pin' in requestBody,
+        hasPINField: 'PIN' in requestBody,
         hasImageField: 'image' in requestBody,
         hasMerchantKeyField: 'merchantKey' in requestBody
       });
