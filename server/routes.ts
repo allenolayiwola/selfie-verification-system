@@ -397,27 +397,38 @@ export function registerRoutes(app: Express): Server {
         merchantKey: merchantKey
       };
       
-      // Double-check the format by logging key properties
-      console.log('Pin Value:', pinNumber);
-      console.log('Pin Type:', typeof pinNumber);
-      console.log('Pin Length:', pinNumber.length);
-      console.log('Pin First/Last Chars:', pinNumber.charAt(0) + '...' + pinNumber.charAt(pinNumber.length-1));
+      // These logs are now redundant with our enhanced logging below
+      
+      // Enhanced detailed logging for debugging purposes
+      
+      // Original request details
+      console.log('ORIGINAL REQUEST DETAILS:');
+      console.log('========================');
+      console.log('PIN Field Value (raw):', pinNumber);
+      console.log('PIN Field Type:', typeof pinNumber);
+      console.log('PIN Field Length:', pinNumber.length);
+      console.log('PIN First/Last Chars:', pinNumber.charAt(0) + '...' + pinNumber.charAt(pinNumber.length-1));
+      console.log('PIN Before Trimming:', pinNumber);
+      console.log('PIN After Trimming:', trimmedPinNumber);
+      // Skip character codes to avoid TypeScript errors
       
       // Log the exact JSON string that will be sent
-      console.log('Actual JSON string to be sent:', JSON.stringify(requestBody).substring(0, 100) + '...');
-      console.log('Original PIN:', trimmedPinNumber);
-      
-      console.log('Sending verification to external API:', {
-        url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
-        pin: pinNumber.substr(0, 5) + '...',  // Log only first part for privacy
-        merchantKey,
-        imageSize: base64Data.length
+      console.log('\nREQUEST BODY 1 (Original):');
+      console.log('=======================');
+      const requestBodyJSON = JSON.stringify(requestBody);
+      console.log('JSON Length:', requestBodyJSON.length);
+      console.log('JSON Sample:', requestBodyJSON.substring(0, 100) + '...');
+      console.log('Original Field Names:', Object.keys(requestBody));
+      console.log('Field Types:', {
+        pin: typeof requestBody.pin,
+        image: typeof requestBody.image,
+        merchantKey: typeof requestBody.merchantKey
       });
       
-      console.log('Request body structure:', Object.keys(requestBody));
-      
       // Let's also log the exact field names (crucial for debugging)
-      console.log('Field names exactly as sent:', {
+      console.log('\nFIELD NAME CHECK:');
+      console.log('==============');
+      console.log('Field names exactly as sent in requestBody:', {
         hasPinField: 'pin' in requestBody,
         hasPINField: 'PIN' in requestBody,
         hasImageField: 'image' in requestBody,
@@ -429,7 +440,35 @@ export function registerRoutes(app: Express): Server {
         ...requestBody,
         image: requestBody.image ? requestBody.image.substring(0, 50) + '...[truncated]' : null
       };
-      console.log('Request body JSON structure:', JSON.stringify(requestBodyForLog, null, 2));
+      console.log('\nREQUEST BODY 1 STRUCTURE:');
+      console.log('=======================');
+      console.log(JSON.stringify(requestBodyForLog, null, 2));
+      
+      // Now log the alternate request body
+      console.log('\nREQUEST BODY 2 (Alternate):');
+      console.log('========================');
+      const requestBodyAlternateJSON = JSON.stringify(requestBodyAlternate);
+      console.log('JSON Length:', requestBodyAlternateJSON.length);
+      console.log('JSON Sample:', requestBodyAlternateJSON.substring(0, 100) + '...');
+      console.log('Alternate Field Names:', Object.keys(requestBodyAlternate));
+      console.log('Field Types:', {
+        pin: typeof requestBodyAlternate.pin,
+        image: typeof requestBodyAlternate.image,
+        merchantKey: typeof requestBodyAlternate.merchantKey
+      });
+
+      // Check for any potential encoding issues with the PIN
+      console.log('\nPOSSIBLE ENCODING ISSUES:');
+      console.log('======================');
+      console.log('PIN URLEncoded:', encodeURIComponent(trimmedPinNumber));
+      console.log('PIN with Space Check:', `"${trimmedPinNumber}"`.indexOf(' ') >= 0 ? 'Has spaces' : 'No spaces');
+      console.log('PIN with Special Chars Check:', /[^\w\-]/.test(trimmedPinNumber) ? 'Has special chars' : 'No special chars');
+      
+      console.log('\nAPI DETAILS:');
+      console.log('===========');
+      console.log('URL:', 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64');
+      console.log('Request Method:', 'POST');
+      console.log('Content-Type:', 'application/json');
 
       // Call external API
       // Let's try the alternate request body structure
