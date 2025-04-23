@@ -383,10 +383,18 @@ export function registerRoutes(app: Express): Server {
       // Format: GHA-xxxxxxxx-x
       
       // Using merchantKey as requested
+      // Try a different approach - specify pin exactly as first property
       const requestBody = {
         pin: trimmedPinNumber, // PIN in correct GHA-xxxxxxxx-x format
         image: base64Data,
         merchantKey: merchantKey // Keep using merchantKey as requested
+      };
+      
+      // Make a different JSON structure that might be more compatible with API
+      const requestBodyAlternate: Record<string, string> = {
+        pin: trimmedPinNumber,
+        image: base64Data,
+        merchantKey: merchantKey
       };
       
       // Double-check the format by logging key properties
@@ -424,12 +432,14 @@ export function registerRoutes(app: Express): Server {
       console.log('Request body JSON structure:', JSON.stringify(requestBodyForLog, null, 2));
 
       // Call external API
+      // Let's try the alternate request body structure
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBodyAlternate)
       });
 
       const responseData = await apiResponse.json();
