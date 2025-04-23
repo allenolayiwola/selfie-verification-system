@@ -103,8 +103,8 @@ async function connectWithRetry(retryCount = 0): Promise<void> {
       serveStatic(app);
     }
 
-    // Use port 8080 for production (Digital Ocean) and 5000 for development
-    const port = parseInt(process.env.PORT || (process.env.NODE_ENV === 'production' ? '8080' : '5000'));
+    // Use the PORT environment variable for flexibility, but default to 5000 for development
+    const port = parseInt(process.env.PORT || '5000');
     server.listen(port, '0.0.0.0', () => {
       console.log(`Server is running on port ${port} in ${process.env.NODE_ENV} mode`);
       log(`serving on port ${port}`);

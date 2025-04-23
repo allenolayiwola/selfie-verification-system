@@ -376,9 +376,11 @@ export function registerRoutes(app: Express): Server {
       // Try a different format for the PIN field
       // The API is expecting "pin" (not "PIN"), let's check the exact format
       // Explicitly create the exact structure needed with both lowercase and JSON stringified properly
-      // Try different pin format to see what the API accepts
+      // Looking at API documentation, let's try with PIN as a separate key/value structure
       const requestBody = {
-        pin: trimmedPinNumber, 
+        pin: trimmedPinNumber, // The pin in correct format
+        PIN: trimmedPinNumber, // Try uppercase PIN as well
+        pinNumber: trimmedPinNumber, // Try another possible field name
         image: base64Data,
         merchantKey: merchantKey
       };
@@ -496,7 +498,7 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
-  // Health check endpoint
+  // Health check endpoint - essential for deployment
   app.get("/health", async (req, res) => {
     try {
       await db.select().from(users).limit(1);
@@ -505,7 +507,8 @@ export function registerRoutes(app: Express): Server {
         timestamp: new Date().toISOString(),
         env: process.env.NODE_ENV,
         database: "connected",
-        server: "running"
+        server: "running",
+        port: 8080
       });
     } catch (error) {
       console.error('Health check failed:', error);
@@ -515,6 +518,11 @@ export function registerRoutes(app: Express): Server {
         timestamp: new Date().toISOString()
       });
     }
+  });
+  
+  // Simple root endpoint for k8s health checks
+  app.get("/", (req, res) => {
+    res.status(200).send("ID Verification System is running");
   });
 
   const httpServer = createServer(app);
