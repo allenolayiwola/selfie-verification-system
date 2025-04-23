@@ -313,7 +313,7 @@ export function registerRoutes(app: Express): Server {
     console.log('Verification request received with body keys:', Object.keys(req.body));
     
     const { pinNumber, imageData } = req.body;
-    const merchantCode = "5ce32d6e-2140-413a-935d-dbbb74c65439";
+    const merchantKey = "5ce32d6e-2140-413a-935d-dbbb74c65439";
     
     console.log('PIN number present:', !!pinNumber, 'Image data present:', !!imageData);
 
@@ -359,7 +359,7 @@ export function registerRoutes(app: Express): Server {
       // {
       //   "pin": "GHA-xxxxxxxx-x",
       //   "image": "base 64 image",
-      //   "merchantCode": "xxxxx-xxxxx-xxxxx"
+      //   "merchantKey": "xxxxx-xxxxx-xxxxx"
       // }
       
       if (!pinNumber || pinNumber.trim() === '') {
@@ -374,13 +374,13 @@ export function registerRoutes(app: Express): Server {
       const requestBody = {
         pin: pinNumber.trim(), // Must use "pin" as the exact field name
         image: base64Data, // Send the raw base64 data
-        merchantCode // Keep the merchant code as is
+        merchantKey // Changed from merchantCode to merchantKey
       };
       
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
         pin: pinNumber.substr(0, 5) + '...',  // Log only first part for privacy
-        merchantCode,
+        merchantKey,
         imageSize: base64Data.length
       });
       
@@ -408,7 +408,7 @@ export function registerRoutes(app: Express): Server {
       // Store verification metadata (without image data) in database
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
-        merchantId: merchantCode,
+        merchantId: merchantKey,
         pinNumber,
         imageData: "", // Store empty string instead of null
         status: apiResponse.ok ? "pending" : "rejected",
