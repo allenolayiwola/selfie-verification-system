@@ -352,8 +352,10 @@ export function registerRoutes(app: Express): Server {
       });
 
       // Make sure PIN is properly formatted - important to use "pin" field name exactly
-      console.log('PIN Number raw value:', pinNumber);
-      console.log('PIN Number type:', typeof pinNumber);
+      // Strip any whitespace that might be causing issues with validation
+      const trimmedPinNumber = pinNumber.trim();
+      console.log('PIN Number raw value:', trimmedPinNumber);
+      console.log('PIN Number type:', typeof trimmedPinNumber);
       
       // Format the request body EXACTLY as required by the API:
       // {
@@ -372,13 +374,20 @@ export function registerRoutes(app: Express): Server {
       
       // Create the exact format required by the API
       // Try a different format for the PIN field
-      // Looking at the API error "PIN can not be null", let's make sure we're using the format
-      // the API expects exactly
+      // The API is expecting "pin" (not "PIN"), let's check the exact format
+      // Explicitly create the exact structure needed with both lowercase and JSON stringified properly
+      // Try different pin format to see what the API accepts
       const requestBody = {
-        PIN: pinNumber.trim(), // Try uppercase PIN as field name
+        pin: trimmedPinNumber, 
         image: base64Data,
         merchantKey: merchantKey
       };
+      
+      // Double-check the format by logging key properties
+      console.log('Pin Value:', pinNumber);
+      console.log('Pin Type:', typeof pinNumber);
+      console.log('Pin Length:', pinNumber.length);
+      console.log('Pin First/Last Chars:', pinNumber.charAt(0) + '...' + pinNumber.charAt(pinNumber.length-1));
       
       // Log the exact JSON string that will be sent
       console.log('Actual JSON string to be sent:', JSON.stringify(requestBody).substring(0, 100) + '...');
