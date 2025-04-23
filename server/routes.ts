@@ -361,10 +361,20 @@ export function registerRoutes(app: Express): Server {
       //   "image": "base 64 image",
       //   "merchantCode": "xxxxx-xxxxx-xxxxx"
       // }
+      
+      if (!pinNumber || pinNumber.trim() === '') {
+        console.log('WARNING: PIN is empty or null, cannot proceed with verification');
+        return res.status(400).json({ 
+          error: "Ghana Card Number is required",
+          details: "Please provide a valid Ghana Card Number"
+        });
+      }
+      
+      // Create the exact format required by the API
       const requestBody = {
-        pin: pinNumber, // PIN must be sent as "pin" (not pinNumber)
+        pin: pinNumber.trim(), // Must use "pin" as the exact field name
         image: base64Data, // Send the raw base64 data
-        merchantCode
+        merchantCode // Keep the merchant code as is
       };
       
       console.log('Sending verification to external API:', {
@@ -375,6 +385,13 @@ export function registerRoutes(app: Express): Server {
       });
       
       console.log('Request body structure:', Object.keys(requestBody));
+      
+      // For debugging - log the actual JSON being sent (without showing full image data)
+      const requestBodyForLog = {
+        ...requestBody,
+        image: requestBody.image ? requestBody.image.substring(0, 50) + '...[truncated]' : null
+      };
+      console.log('Request body JSON structure:', JSON.stringify(requestBodyForLog, null, 2));
 
       // Call external API
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {

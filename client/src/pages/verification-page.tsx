@@ -70,8 +70,9 @@ export default function VerificationPage() {
       return;
     }
 
+    // Make sure form data uses the exact field name expected
     verifyMutation.mutate({
-      ...formData,
+      pinNumber: formData.pinNumber, // This will be mapped to "pin" on the server
       imageData: capturedImage, // Send the raw base64 data without splitting
     });
   };
