@@ -378,13 +378,12 @@ export function registerRoutes(app: Express): Server {
       // Try a different format for the PIN field
       // The API is expecting "pin" (not "PIN"), let's check the exact format
       // Explicitly create the exact structure needed with both lowercase and JSON stringified properly
-      // Let's try a completely different structure based on API documentation
-      // The API might expect a differently structured PIN - removing any special characters
-      // The API error says "PIN cannot be null" but we are sending it
-      const cleanedPin = trimmedPinNumber.replace(/[^a-zA-Z0-9]/g, ''); // Remove hyphens
+      // Let's try keeping the PIN in its original format with hyphens
+      // The API might be expecting the exact format with hyphens included
+      // Format: GHA-xxxxxxxx-x
       
       const requestBody = {
-        pin: cleanedPin, // Only digits and letters
+        pin: trimmedPinNumber, // Keep original format with hyphens
         image: base64Data,
         merchantKey: merchantKey
       };
@@ -398,7 +397,6 @@ export function registerRoutes(app: Express): Server {
       // Log the exact JSON string that will be sent
       console.log('Actual JSON string to be sent:', JSON.stringify(requestBody).substring(0, 100) + '...');
       console.log('Original PIN:', trimmedPinNumber);
-      console.log('Cleaned PIN:', cleanedPin);
       
       console.log('Sending verification to external API:', {
         url: 'https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64',
