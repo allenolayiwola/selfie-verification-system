@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import express from "express";
 import { db } from "@db";
 import { users, verifications, insertUserSchema } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { fromZodError } from "zod-validation-error";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -463,14 +463,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get verifications (admin only)
+  // Get verifications (admin only) - with user details
   app.get("/api/verifications", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
       return res.sendStatus(401);
     }
 
     try {
-      const results = await db.select().from(verifications);
+      // Join verifications with users to get user details
+      const results = await db
+        .select({
+          id: verifications.id,
+          userId: verifications.userId,
+          merchantId: verifications.merchantId,
+          pinNumber: verifications.pinNumber,
+          status: verifications.status,
+          response: verifications.response,
+          createdAt: verifications.createdAt,
+          // Include user details
+          username: users.username,
+          fullName: users.fullName,
+          department: users.department,
+          email: users.email,
+          userRole: users.role
+        })
+        .from(verifications)
+        .leftJoin(users, eq(verifications.userId, users.id))
+        .orderBy(desc(verifications.createdAt)); // Most recent first
+      
       res.json(results);
     } catch (error) {
       console.error('Error fetching verifications:', error);
