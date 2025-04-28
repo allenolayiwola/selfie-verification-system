@@ -11,6 +11,7 @@ import VerificationPage from "@/pages/verification-page";
 import AdminPage from "@/pages/admin-page";
 import UserManagementPage from "@/pages/user-management";
 import VerificationHistoryPage from "@/pages/verification-history";
+import VerificationDetailPage from "@/pages/verification-detail";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <ProtectedRoute path="/admin" component={AdminPage} />
       <ProtectedRoute path="/users" component={UserManagementPage} />
       <ProtectedRoute path="/history" component={VerificationHistoryPage} />
+      <ProtectedRoute path="/verification-detail/:id" component={VerificationDetailPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
