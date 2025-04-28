@@ -31,10 +31,18 @@ const compressImage = (imageSrc: string): Promise<string> => {
       // Create temporary canvas for compression
       const canvas = document.createElement('canvas');
       
-      // Maintain the minimum required dimensions (640x480) for API
-      // Do not resize smaller than required minimum
-      let width = CAPTURE_WIDTH;  // 640px
-      let height = CAPTURE_HEIGHT; // 480px
+      // Get original image dimensions
+      const origWidth = img.naturalWidth;
+      const origHeight = img.naturalHeight;
+      
+      // Check if this is a mobile device
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      console.log(`Device detected: ${isMobile ? 'Mobile' : 'Desktop'}`);
+      console.log(`Original image dimensions: ${origWidth}x${origHeight}`);
+      
+      // Always use exact API required dimensions - this is critical for Ghana NIA verification
+      const width = CAPTURE_WIDTH;  // 640px
+      const height = CAPTURE_HEIGHT; // 480px
 
       canvas.width = width;
       canvas.height = height;
@@ -45,23 +53,47 @@ const compressImage = (imageSrc: string): Promise<string> => {
         return;
       }
 
+      // Start with white background to avoid transparency issues
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+
       // Enable image smoothing for better quality
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Draw image with reduced dimensions
-      ctx.drawImage(img, 0, 0, width, height);
+      // Calculate how to center and properly scale the image
+      // This ensures proper aspect ratio and no stretching/distortion
+      let drawWidth, drawHeight, xOffset, yOffset;
+      
+      // Calculate scaling to fit while maintaining aspect ratio
+      const scale = Math.min(width / origWidth, height / origHeight);
+      drawWidth = origWidth * scale;
+      drawHeight = origHeight * scale;
+      
+      // Center the image in the canvas
+      xOffset = (width - drawWidth) / 2;
+      yOffset = (height - drawHeight) / 2;
+      
+      // Draw image centered and properly scaled
+      ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
 
-      // Try different quality levels if needed
-      let quality = 0.4; // Start with lower quality
-      let compressedImage = canvas.toDataURL('image/png', quality);
+      // Always use higher quality for verification images (especially on mobile)
+      // The Ghana NIA API needs clear, high-quality images
+      const quality = isMobile ? 0.95 : 0.85; // Higher quality for mobile
+      
+      // Use JPEG which is better for photos and required by the API
+      let compressedImage = canvas.toDataURL('image/jpeg', quality);
       let base64Size = (compressedImage.length * 3) / 4;
 
-      // Gradually reduce quality until file size is under limit
-      while (base64Size > MAX_FILE_SIZE && quality > 0.1) {
-        quality -= 0.1;
-        compressedImage = canvas.toDataURL('image/png', quality);
-        base64Size = (compressedImage.length * 3) / 4;
+      // Only reduce quality as a last resort if image is too large
+      if (base64Size > MAX_FILE_SIZE) {
+        let adjustedQuality = 0.8;
+        while (base64Size > MAX_FILE_SIZE && adjustedQuality > 0.6) {
+          adjustedQuality -= 0.05;
+          compressedImage = canvas.toDataURL('image/jpeg', adjustedQuality);
+          base64Size = (compressedImage.length * 3) / 4;
+        }
+        console.log(`Reduced quality to ${adjustedQuality.toFixed(2)} to meet size limit`);
       }
 
       if (base64Size > MAX_FILE_SIZE) {
@@ -72,11 +104,14 @@ const compressImage = (imageSrc: string): Promise<string> => {
       // Convert to base64 without the data URL prefix
       const base64Data = compressedImage.split(',')[1];
       console.log('Image compression details:', {
-        originalSize: imageSrc.length,
-        compressedSize: base64Data.length,
-        width,
-        height,
-        quality
+        device: isMobile ? 'Mobile' : 'Desktop',
+        originalDimensions: `${origWidth}x${origHeight}`,
+        finalDimensions: `${width}x${height}`,
+        drawDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
+        originalSize: (imageSrc.length / 1024).toFixed(2) + 'KB',
+        compressedSize: (base64Data.length / 1024).toFixed(2) + 'KB',
+        quality: quality,
+        format: 'JPEG'
       });
 
       resolve(base64Data);
@@ -468,19 +503,33 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const confirmCapture = useCallback(() => {
     if (capturedImage) {
       console.log('Confirming capture, image data length:', capturedImage.length);
-      console.log('Image data starts with:', capturedImage.substring(0, 30));
-      console.log('Image data is data URL?', capturedImage.startsWith('data:image'));
       
+      // Detect mobile device for extra validation
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      // Verify the image data is valid for API submission
+      if (capturedImage.length < 1000) {
+        setError("Image data appears to be corrupted or too small. Please retake the photo.");
+        return;
+      }
+      
+      // Add additional logging for troubleshooting
+      console.log('Image validation:', {
+        dataLength: capturedImage.length,
+        isMobile: isMobile,
+        containsValidData: /^[A-Za-z0-9+/=]+$/.test(capturedImage.substring(0, 100))
+      });
+        
       // Always ensure we're sending the raw base64 data without the "data:image" prefix
       // This is needed because our server expects raw base64 data
       const imageData = capturedImage.startsWith('data:image') 
         ? capturedImage.split(',')[1] 
         : capturedImage;
-        
+      
       console.log('Final image data length:', imageData.length);
       onCapture(imageData);
     }
-  }, [capturedImage, onCapture]);
+  }, [capturedImage, onCapture, setError]);
 
   const retake = useCallback(() => {
     setCapturedImage(null);
@@ -495,10 +544,13 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
             audio={false}
             width={CAPTURE_WIDTH}
             height={CAPTURE_HEIGHT}
-            screenshotFormat="image/png"
+            screenshotFormat="image/jpeg"
+            screenshotQuality={0.92}
+            forceScreenshotSourceSize={true}
             videoConstraints={{
-              width: CAPTURE_WIDTH,
-              height: CAPTURE_HEIGHT,
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 },
+              aspectRatio: 4/3,
               facingMode: "user"
             }}
             className="w-full"
@@ -508,9 +560,16 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
             <img
               src={capturedImage.startsWith('data:image') 
                 ? capturedImage
-                : `data:image/png;base64,${capturedImage}`} // Add data URL prefix if needed
+                : `data:image/jpeg;base64,${capturedImage}`} // Add data URL prefix with correct format
               alt="Captured"
               className="w-full h-auto"
+              onError={(e) => {
+                console.error('Error displaying captured image. Trying PNG format...');
+                // Try PNG as fallback
+                if (e.currentTarget.src.includes('jpeg')) {
+                  e.currentTarget.src = `data:image/png;base64,${capturedImage}`;
+                }
+              }}
             />
             <div className="absolute top-2 right-2">
               <Button
