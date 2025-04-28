@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft, CheckCircle, XCircle, Clock, Download } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle, XCircle, Clock, Download, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/navbar";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,6 +62,47 @@ export default function VerificationDetailPage() {
       return JSON.stringify(jsonData, null, 2);
     } catch (e) {
       return jsonString;
+    }
+  };
+  
+  // Function to extract and display the base64 image from the API response
+  const extractImageFromResponse = (jsonString: string): string | null => {
+    try {
+      const jsonData = JSON.parse(jsonString);
+      
+      // Check different possible locations for the image data in the API response
+      if (jsonData.image && typeof jsonData.image === 'string') {
+        // If the API returns the image directly
+        return jsonData.image.startsWith('data:image') 
+          ? jsonData.image 
+          : `data:image/jpeg;base64,${jsonData.image}`;
+      } else if (jsonData.data && jsonData.data.image) {
+        // If the API wraps the response in a data object
+        return jsonData.data.image.startsWith('data:image') 
+          ? jsonData.data.image 
+          : `data:image/jpeg;base64,${jsonData.data.image}`;
+      } else if (jsonData.response && jsonData.response.image) {
+        // Another possible nesting structure
+        return jsonData.response.image.startsWith('data:image') 
+          ? jsonData.response.image 
+          : `data:image/jpeg;base64,${jsonData.response.image}`;
+      }
+      
+      // Look for any property that might contain base64 data
+      for (const key in jsonData) {
+        if (typeof jsonData[key] === 'string' && 
+            (jsonData[key].startsWith('data:image') || 
+             jsonData[key].length > 500 && /^[A-Za-z0-9+/=]+$/.test(jsonData[key]))) {
+          return jsonData[key].startsWith('data:image') 
+            ? jsonData[key] 
+            : `data:image/jpeg;base64,${jsonData[key]}`;
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      console.error("Error extracting image:", e);
+      return null;
     }
   };
 
@@ -247,21 +288,52 @@ export default function VerificationDetailPage() {
           </div>
 
           <div className="md:col-span-2">
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle className="text-xl">API Response Data</CardTitle>
-                <CardDescription>
-                  Raw data returned by the verification API
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted p-4 rounded-md overflow-auto max-h-[60vh]">
-                  <pre className="text-xs whitespace-pre-wrap break-words text-muted-foreground">
-                    {formatJsonResponse(verification.response)}
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Verification Image Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Verification Image</CardTitle>
+                  <CardDescription>
+                    Image used for identity verification
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-center">
+                    {extractImageFromResponse(verification.response) ? (
+                      <div className="rounded-md overflow-hidden border border-border">
+                        <img 
+                          src={extractImageFromResponse(verification.response)!} 
+                          alt="Verification Image" 
+                          className="max-w-full h-auto object-contain max-h-[300px]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-muted-foreground p-8 border border-dashed rounded-md">
+                        <AlertCircle className="h-12 w-12 mb-2" />
+                        <p>No image data found in the API response</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* API Response Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">API Response Data</CardTitle>
+                  <CardDescription>
+                    Raw data returned by the verification API
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted p-4 rounded-md overflow-auto max-h-[40vh]">
+                    <pre className="text-xs whitespace-pre-wrap break-words text-muted-foreground">
+                      {formatJsonResponse(verification.response)}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </main>
