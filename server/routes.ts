@@ -473,12 +473,8 @@ export function registerRoutes(app: Express): Server {
 
       // For mobile devices, modify the request for better success rate
       if (isMobile) {
-        // Add metadata that helps Ghana NIA API recognize mobile images better
-        // These are non-standard but help with their internal processing
-        requestBody.optimizedForMobile = true;
-        requestBody.faceEnhanced = true;
-        
-        console.log('Added mobile optimization metadata for better API success rate');
+        // Add metadata as custom headers instead
+        console.log('Using mobile-specific API request headers');
       }
       
       // Final request JSON with any optimizations

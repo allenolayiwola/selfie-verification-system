@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import * as tf from '@tensorflow/tfjs';
 import * as faceDetection from '@tensorflow-models/face-detection';
 
+// Fixed dimensions for Ghana NIA API - exact 4:3 ratio required
 const CAPTURE_WIDTH = 640;
 const CAPTURE_HEIGHT = 480;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
@@ -730,17 +731,17 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
             width={CAPTURE_WIDTH}
             height={CAPTURE_HEIGHT}
             screenshotFormat="image/jpeg"
-            screenshotQuality={0.92}
+            screenshotQuality={0.95}
             forceScreenshotSourceSize={true}
             videoConstraints={{
-              width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 },
+              width: { min: 640, ideal: 640, max: 640 },
+              height: { min: 480, ideal: 480, max: 480 },
               aspectRatio: 4/3,
               facingMode: "user"
             }}
             className="w-full"
             style={{ 
-              objectFit: "contain",
+              objectFit: "cover",
               aspectRatio: "4/3",
               maxWidth: "100%",
               margin: "0 auto"
