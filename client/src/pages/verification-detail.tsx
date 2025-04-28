@@ -370,30 +370,61 @@ export default function VerificationDetailPage() {
 
           <div className="md:col-span-2">
             <div className="grid grid-cols-1 gap-6">
-              {/* Verification Image Card */}
+              {/* Verification Images Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Verification Image</CardTitle>
+                  <CardTitle className="text-xl">Verification Images</CardTitle>
                   <CardDescription>
-                    Image used for identity verification
+                    Comparison of captured image and identity verification result
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex justify-center">
-                    {extractImageFromResponse(verification.response) ? (
-                      <div className="rounded-md overflow-hidden border border-border">
-                        <img 
-                          src={extractImageFromResponse(verification.response)!} 
-                          alt="Verification Image" 
-                          className="max-w-full h-auto object-contain max-h-[300px]"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-muted-foreground p-8 border border-dashed rounded-md">
-                        <AlertCircle className="h-12 w-12 mb-2" />
-                        <p>No image data found in the API response</p>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Captured Image */}
+                    <div>
+                      <h3 className="font-medium text-base mb-3 text-center">Captured Image</h3>
+                      {verification.imageData ? (
+                        <div className="rounded-md overflow-hidden border border-border h-[300px] flex items-center justify-center">
+                          <img 
+                            src={verification.imageData.startsWith('data:image') 
+                              ? verification.imageData 
+                              : `data:image/jpeg;base64,${verification.imageData}`} 
+                            alt="Captured Image" 
+                            className="max-w-full h-auto object-contain max-h-[300px]"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-muted-foreground p-8 border border-dashed rounded-md h-[300px]">
+                          <AlertCircle className="h-12 w-12 mb-2" />
+                          <p>No captured image available</p>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Image captured during verification attempt
+                      </p>
+                    </div>
+
+                    {/* API Response Image */}
+                    <div>
+                      <h3 className="font-medium text-base mb-3 text-center">API Response Image</h3>
+                      {extractImageFromResponse(verification.response) ? (
+                        <div className="rounded-md overflow-hidden border border-border h-[300px] flex items-center justify-center">
+                          <img 
+                            src={extractImageFromResponse(verification.response)!} 
+                            alt="API Response Image" 
+                            className="max-w-full h-auto object-contain max-h-[300px]"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-muted-foreground p-8 border border-dashed rounded-md h-[300px]">
+                          <AlertCircle className="h-12 w-12 mb-2" />
+                          <p>No image found in API response</p>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Official image returned from Ghana NIA database
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
