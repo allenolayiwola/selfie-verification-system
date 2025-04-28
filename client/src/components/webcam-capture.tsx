@@ -23,7 +23,8 @@ const MAX_FACE_SIZE = 0.7;
 const MAX_FACES_ALLOWED = 4;
 const GLASSES_DETECTION_THRESHOLD = 0.7; // Threshold for glasses detection confidence
 
-// Update the image capture and compression function
+// Completely rewritten image capture and compression function
+// Designed specifically to fix mobile distortion issues
 const compressImage = (imageSrc: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -36,17 +37,18 @@ const compressImage = (imageSrc: string): Promise<string> => {
         const origWidth = img.naturalWidth;
         const origHeight = img.naturalHeight;
         
-        // Check if this is a mobile device
+        // CRITICAL FIX: Detect mobile device
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         console.log(`Device detected: ${isMobile ? 'Mobile' : 'Desktop'}`);
         console.log(`Original image dimensions: ${origWidth}x${origHeight}`);
         
-        // Always use the exact dimensions required by Ghana NIA API
-        const width = CAPTURE_WIDTH;  // 640px
-        const height = CAPTURE_HEIGHT; // 480px
+        // Always output exactly 640x480 for Ghana NIA API
+        const targetWidth = CAPTURE_WIDTH;  // 640px
+        const targetHeight = CAPTURE_HEIGHT; // 480px
 
-        canvas.width = width;
-        canvas.height = height;
+        // Use default 4:3 aspect ratio, crucial for proper display
+        canvas.width = targetWidth; 
+        canvas.height = targetHeight;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
@@ -54,66 +56,73 @@ const compressImage = (imageSrc: string): Promise<string> => {
           return;
         }
 
-        // Create a completely clean white background
+        // Clear canvas with white background
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-        // Enable image smoothing for better quality
+        // Enable high-quality image rendering
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // ENHANCED MOBILE HANDLING - Fixes distortion issues
+        // MOBILE-FIRST APPROACH
         if (isMobile) {
-          console.log("Using enhanced mobile-specific image processing algorithm");
+          console.log("Using mobile-optimized image processing");
           
-          // Clear the canvas first
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, width, height);
+          // For mobile: Use a complete redraw approach
+          // 1. Calculate source dimensions that will fit a 4:3 aspect ratio
+          const originalAspect = origWidth / origHeight;
+          const targetAspect = 4/3; // Required by Ghana NIA API
           
-          // Calculate scaling to fit while maintaining aspect ratio (4:3) for NIA requirements
-          // This is the key fix for mobile distortion issues
-          const scale = Math.min(width / origWidth, height / origHeight);
-          const drawWidth = origWidth * scale;
-          const drawHeight = origHeight * scale;
+          // Define source rectangle (part of original image we'll use)
+          let srcX = 0, srcY = 0, srcWidth = origWidth, srcHeight = origHeight;
           
-          // Center the image in the canvas
-          const xOffset = (width - drawWidth) / 2;
-          const yOffset = (height - drawHeight) / 2;
+          // If original is wider than 4:3, crop width
+          if (originalAspect > targetAspect) {
+            srcWidth = Math.round(origHeight * targetAspect);
+            srcX = Math.floor((origWidth - srcWidth) / 2);
+          } 
+          // If original is taller than 4:3, crop height
+          else if (originalAspect < targetAspect) {
+            srcHeight = Math.round(origWidth / targetAspect);
+            srcY = Math.floor((origHeight - srcHeight) / 2);
+          }
           
-          console.log('Mobile scaling details:', {
-            originalDimensions: `${origWidth}x${origHeight}`,
-            scaleFactor: scale.toFixed(2),
-            newDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
-            offsets: `x:${xOffset.toFixed(0)}, y:${yOffset.toFixed(0)}`
+          // Log the crop calculations
+          console.log('Mobile image crop dimensions:', {
+            originalAspect: originalAspect.toFixed(2),
+            targetAspect: targetAspect.toFixed(2),
+            srcRect: `x:${srcX}, y:${srcY}, w:${srcWidth}, h:${srcHeight}`
           });
           
-          // Draw image centered and properly scaled to avoid stretching
-          ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
+          // Draw the cropped portion to fill canvas exactly
+          ctx.drawImage(
+            img,
+            srcX, srcY, srcWidth, srcHeight,   // Source rectangle
+            0, 0, targetWidth, targetHeight    // Destination rectangle (fill canvas)
+          );
           
-          // Use higher quality for mobile - the API needs clarity without too much compression
-          const mobileCompressedImage = canvas.toDataURL('image/jpeg', 0.92);
-          const mobileBase64Data = mobileCompressedImage.split(',')[1];
+          // Convert to JPEG at high quality
+          const mobileResult = canvas.toDataURL('image/jpeg', 0.95);
+          const mobileBase64 = mobileResult.split(',')[1];
           
-          console.log('Mobile image processing complete:', {
-            finalDimensions: `${width}x${height}`,
-            dataSize: (mobileBase64Data.length / 1024).toFixed(2) + 'KB',
-            quality: 0.92,
-            format: 'JPEG'
+          console.log('Mobile processing complete:', {
+            finalDimensions: `${targetWidth}x${targetHeight}`,
+            size: (mobileBase64.length / 1024).toFixed(2) + 'KB'
           });
           
-          resolve(mobileBase64Data);
+          resolve(mobileBase64);
           return;
         }
         
-        // DESKTOP PROCESSING - more advanced with aspect ratio preservation
-        // Calculate scaling to fit while maintaining aspect ratio
-        const scale = Math.min(width / origWidth, height / origHeight);
+        // DESKTOP HANDLING
+        // Calculate scaling to maintain aspect ratio
+        const scale = Math.min(targetWidth / origWidth, targetHeight / origHeight);
         const drawWidth = origWidth * scale;
         const drawHeight = origHeight * scale;
         
-        // Center the image in the canvas
-        const xOffset = (width - drawWidth) / 2;
-        const yOffset = (height - drawHeight) / 2;
+        // Center the image
+        const xOffset = (targetWidth - drawWidth) / 2;
+        const yOffset = (targetHeight - drawHeight) / 2;
         
         // Draw image centered and properly scaled
         ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
@@ -136,7 +145,7 @@ const compressImage = (imageSrc: string): Promise<string> => {
         const base64Data = compressedImage.split(',')[1];
         console.log('Desktop image compression details:', {
           originalDimensions: `${origWidth}x${origHeight}`,
-          finalDimensions: `${width}x${height}`,
+          finalDimensions: `${targetWidth}x${targetHeight}`,
           drawDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
           originalSize: (imageSrc.length / 1024).toFixed(2) + 'KB',
           compressedSize: (base64Data.length / 1024).toFixed(2) + 'KB',
