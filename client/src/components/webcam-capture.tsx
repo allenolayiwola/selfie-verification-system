@@ -467,7 +467,18 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
   const confirmCapture = useCallback(() => {
     if (capturedImage) {
-      onCapture(capturedImage);
+      console.log('Confirming capture, image data length:', capturedImage.length);
+      console.log('Image data starts with:', capturedImage.substring(0, 30));
+      console.log('Image data is data URL?', capturedImage.startsWith('data:image'));
+      
+      // Always ensure we're sending the raw base64 data without the "data:image" prefix
+      // This is needed because our server expects raw base64 data
+      const imageData = capturedImage.startsWith('data:image') 
+        ? capturedImage.split(',')[1] 
+        : capturedImage;
+        
+      console.log('Final image data length:', imageData.length);
+      onCapture(imageData);
     }
   }, [capturedImage, onCapture]);
 
@@ -495,7 +506,9 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         ) : (
           <div className="relative">
             <img
-              src={`data:image/png;base64,${capturedImage}`} // Add data URL prefix back for display
+              src={capturedImage.startsWith('data:image') 
+                ? capturedImage
+                : `data:image/png;base64,${capturedImage}`} // Add data URL prefix if needed
               alt="Captured"
               className="w-full h-auto"
             />

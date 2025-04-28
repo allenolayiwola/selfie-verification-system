@@ -427,11 +427,13 @@ export default function VerificationDetailPage() {
                             onError={(e) => {
                               console.error('Error loading API response image:', e);
                               // Set fallback message on error
-                              e.currentTarget.parentElement.innerHTML = 
-                                '<div class="flex flex-col items-center justify-center text-muted-foreground p-8 h-full w-full">' +
-                                '<p>Image could not be displayed</p>' +
-                                '<p class="text-xs mt-2">API response image may be corrupted or in an unsupported format</p>' +
-                                '</div>';
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.innerHTML = 
+                                  '<div class="flex flex-col items-center justify-center text-muted-foreground p-8 h-full w-full">' +
+                                  '<p>Image could not be displayed</p>' +
+                                  '<p class="text-xs mt-2">API response image may be corrupted or in an unsupported format</p>' +
+                                  '</div>';
+                              }
                             }}
                           />
                         </div>
