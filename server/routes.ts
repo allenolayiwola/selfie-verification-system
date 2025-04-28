@@ -465,13 +465,35 @@ export function registerRoutes(app: Express): Server {
       const responseData = await apiResponse.json();
       console.log('External API response:', responseData);
 
+      // Determine the verification status based on the API response code
+      let verificationStatus = "pending";
+      
+      // Check the response code to determine the actual status
+      if (responseData && responseData.responseCode) {
+        switch (responseData.responseCode) {
+          case "00": // Success
+            verificationStatus = "approved";
+            break;
+          case "01": // Unsuccessful
+          case "02": // Invalid Data
+          case "03": // NIA watchlist
+          case "04": // Server Error
+            verificationStatus = "rejected";
+            break;
+          default:
+            verificationStatus = "pending";
+        }
+      }
+      
+      console.log('Setting verification status:', verificationStatus, 'based on response code:', responseData.responseCode);
+      
       // Store verification metadata (without image data) in database
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
         merchantId: merchantKey,
         pinNumber,
         imageData: "", // Store empty string instead of null
-        status: apiResponse.ok ? "pending" : "rejected",
+        status: verificationStatus,
         response: JSON.stringify(responseData)
       }).returning();
 
