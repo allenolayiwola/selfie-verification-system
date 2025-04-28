@@ -589,6 +589,7 @@ export function registerRoutes(app: Express): Server {
           userId: verifications.userId,
           merchantId: verifications.merchantId,
           pinNumber: verifications.pinNumber,
+          imageData: verifications.imageData,
           status: verifications.status,
           response: verifications.response,
           createdAt: verifications.createdAt,

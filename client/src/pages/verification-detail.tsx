@@ -16,6 +16,7 @@ interface VerificationDetail {
   userId: number;
   merchantId: string;
   pinNumber: string;
+  imageData: string | null;
   status: "pending" | "approved" | "rejected";
   response: string;
   createdAt: string;
