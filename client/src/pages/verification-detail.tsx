@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowLeft, CheckCircle, XCircle, Clock, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/navbar";
+import { useAuth } from "@/hooks/use-auth";
+import { getQueryFn } from "@/lib/queryClient";
 
 interface VerificationDetail {
   id: number;
@@ -28,22 +30,16 @@ export default function VerificationDetailPage() {
   const id = parseInt(params.id, 10);
   const { toast } = useToast();
 
-  const { data: verification, isLoading, error } = useQuery({
+  // Use the useAuth hook to get the user role
+  const { user } = useAuth();
+  
+  // Make sure we include the query function to set credentials properly
+  const { data: verification, isLoading, error } = useQuery<VerificationDetail>({
     queryKey: [`/api/verifications/${id}`],
-    enabled: !isNaN(id),
+    enabled: !isNaN(id) && user?.role === "admin", // Only enable for admin users
     retry: 1, // Limit retries to avoid spamming the server
-    onSuccess: (data: any) => {
-      console.log("Successfully fetched verification details:", data);
-    },
-    onError: (err: Error) => {
-      console.error("Error fetching verification details:", err);
-      toast({
-        title: "Error loading verification",
-        description: err.message || "Could not load verification details",
-        variant: "destructive"
-      });
-    }
-  }) as { data: VerificationDetail | undefined, isLoading: boolean, error: Error | null };
+    queryFn: getQueryFn({ on401: "throw" }) // Explicitly set the query function
+  });
 
   // Function to format JSON for display
   const formatJsonResponse = (jsonString: string) => {

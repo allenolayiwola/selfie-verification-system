@@ -22,6 +22,10 @@ function Router() {
       <ProtectedRoute path="/users" component={UserManagementPage} />
       <ProtectedRoute path="/history" component={VerificationHistoryPage} />
       <ProtectedRoute path="/verification-detail/:id" component={VerificationDetailPage} />
+      {/* Add alternate path that history page is using */}
+      <Route path="/verification-detail/:id">
+        {(params) => <VerificationDetailPage />}
+      </Route>
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
