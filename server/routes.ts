@@ -465,12 +465,29 @@ export function registerRoutes(app: Express): Server {
       const responseData = await apiResponse.json();
       console.log('External API response:', responseData);
 
-      // Determine the verification status based on the API response code
+      // Determine the verification status based on the API response
       let verificationStatus = "pending";
       
-      // Check the response code to determine the actual status
-      if (responseData && responseData.responseCode) {
-        switch (responseData.responseCode) {
+      console.log('Full API response structure:', typeof responseData === 'object' ? 
+          JSON.stringify(responseData, null, 2).substring(0, 500) + '...' : 
+          'Non-object response');
+      
+      // Check for the verification result in different possible response formats
+      // TypeScript type narrowing to ensure responseData is an object with expected fields
+      if (responseData && typeof responseData === 'object' && 'data' in responseData && 
+          responseData.data && typeof responseData.data === 'object' && 'verified' in responseData.data) {
+        // New format with "verified" field
+        const verified = responseData.data.verified;
+        if (verified === "TRUE" || verified === true) {
+          verificationStatus = "approved";
+        } else {
+          verificationStatus = "rejected";
+        }
+        console.log('Setting verification status based on data.verified:', verified);
+      } else if (responseData && typeof responseData === 'object' && 'responseCode' in responseData) {
+        // Original expected format with responseCode
+        const responseCode = responseData.responseCode as string;
+        switch (responseCode) {
           case "00": // Success
             verificationStatus = "approved";
             break;
@@ -483,9 +500,13 @@ export function registerRoutes(app: Express): Server {
           default:
             verificationStatus = "pending";
         }
+        console.log('Setting verification status based on responseCode:', responseCode);
+      } else {
+        // Fallback if neither format matches
+        console.log('Unknown response format, defaulting to pending status');
       }
       
-      console.log('Setting verification status:', verificationStatus, 'based on response code:', responseData.responseCode);
+      console.log('Final verification status:', verificationStatus);
       
       // Store verification metadata (without image data) in database
       const [verification] = await db.insert(verifications).values({
