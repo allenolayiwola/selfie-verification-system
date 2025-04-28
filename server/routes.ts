@@ -569,6 +569,51 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to fetch verifications" });
     }
   });
+  
+  // Get a single verification by ID (admin only) - with user details
+  app.get("/api/verifications/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid verification ID" });
+      }
+
+      // Join verifications with users to get user details
+      const [result] = await db
+        .select({
+          id: verifications.id,
+          userId: verifications.userId,
+          merchantId: verifications.merchantId,
+          pinNumber: verifications.pinNumber,
+          status: verifications.status,
+          response: verifications.response,
+          createdAt: verifications.createdAt,
+          // Include user details
+          username: users.username,
+          fullName: users.fullName,
+          department: users.department,
+          email: users.email,
+          userRole: users.role
+        })
+        .from(verifications)
+        .where(eq(verifications.id, id))
+        .leftJoin(users, eq(verifications.userId, users.id))
+        .limit(1);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Verification not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching verification:', error);
+      res.status(500).json({ error: "Failed to fetch verification" });
+    }
+  });
 
   // Get user verifications
   app.get("/api/user/verifications", async (req, res) => {

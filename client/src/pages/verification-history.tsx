@@ -22,7 +22,8 @@ import {
   Download, 
   UserIcon, 
   Mail, 
-  Building2
+  Building2,
+  Eye
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -166,18 +167,23 @@ export default function VerificationHistoryPage() {
                     <TableHead>Ghana Card Number</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Response</TableHead>
+                    <TableHead className="w-[80px] text-center">Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Loading verification history...
                       </TableCell>
                     </TableRow>
                   ) : filteredVerifications?.length ? (
                     filteredVerifications.map((verification) => (
-                      <TableRow key={verification.id}>
+                      <TableRow 
+                        key={verification.id}
+                        className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() => setLocation(`/verification-detail/${verification.id}`)}
+                      >
                         <TableCell className="font-medium">
                           {format(new Date(verification.createdAt), 'PPp')}
                         </TableCell>
@@ -224,11 +230,25 @@ export default function VerificationHistoryPage() {
                             {verification.response || "No response recorded"}
                           </div>
                         </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click
+                              setLocation(`/verification-detail/${verification.id}`);
+                            }}
+                            title="View details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {searchQuery ? "No matching verification records found" : "No verification records found"}
                       </TableCell>
                     </TableRow>
