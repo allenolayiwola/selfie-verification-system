@@ -545,8 +545,9 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     if (capturedImage) {
       console.log('Confirming capture, image data length:', capturedImage.length);
       
-      // Detect mobile device for extra validation
+      // Detect mobile device for logging
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      console.log(`Device confirming capture: ${isMobile ? 'Mobile' : 'Desktop'}`);
       
       // Verify the image data is valid for API submission
       if (capturedImage.length < 1000) {
@@ -558,17 +559,34 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       console.log('Image validation:', {
         dataLength: capturedImage.length,
         isMobile: isMobile,
-        containsValidData: /^[A-Za-z0-9+/=]+$/.test(capturedImage.substring(0, 100))
+        containsValidData: /^[A-Za-z0-9+/=]+$/.test(capturedImage.substring(0, 100)),
+        isDataURL: capturedImage.includes('data:image')
       });
-        
-      // Always ensure we're sending the raw base64 data without the "data:image" prefix
-      // This is needed because our server expects raw base64 data
-      const imageData = capturedImage.startsWith('data:image') 
-        ? capturedImage.split(',')[1] 
-        : capturedImage;
       
-      console.log('Final image data length:', imageData.length);
-      onCapture(imageData);
+      // IMPORTANT: For mobile API compatibility, we need to ensure
+      // the image data includes the proper data URI prefix
+      // Ghana NIA API expects a proper base64 string, but our server now handles any format
+      
+      let finalImageData;
+      
+      // If it's already a data URL, send it directly
+      if (capturedImage.includes('data:image')) {
+        console.log('Image is already in data URL format');
+        finalImageData = capturedImage;
+      } else {
+        // If it's raw base64, add the proper JPEG data URL prefix for consistency
+        console.log('Converting raw base64 to data URL format');
+        finalImageData = `data:image/jpeg;base64,${capturedImage}`;
+      }
+      
+      console.log('Final image format:', {
+        isDataURL: finalImageData.includes('data:image'),
+        format: finalImageData.includes('jpeg') ? 'JPEG' : 'PNG', 
+        length: finalImageData.length
+      });
+      
+      // The server will handle extracting the base64 data from the data URL
+      onCapture(finalImageData);
     }
   }, [capturedImage, onCapture, setError]);
 

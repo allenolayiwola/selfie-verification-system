@@ -356,10 +356,15 @@ export function registerRoutes(app: Express): Server {
         imageSizeInMB: (imageData.length / (1024 * 1024)).toFixed(2) + 'MB'
       });
 
-      // Ensure we have the correct base64 format
-      const base64Data = imageData.startsWith('data:image/png;base64,')
-        ? imageData.split(',')[1]
-        : imageData;
+      // Handle all possible image format prefixes
+      let base64Data = imageData;
+      
+      // Check for any data URI prefix and extract just the base64 data
+      if (imageData.includes('base64,')) {
+        // This handles any data URI format (png, jpeg, etc.)
+        base64Data = imageData.split('base64,')[1];
+        console.log('Extracted base64 data from data URI');
+      }
 
       console.log('Base64 data details:', {
         originalLength: imageData.length,
