@@ -1,6 +1,16 @@
-# ID Verification System
+# Ghana NIA Verification System
 
-A secure and intelligent ID verification application leveraging advanced image analysis and user experience technologies. This application provides professional photo authentication with comprehensive security features and intuitive user interactions.
+A secure and intelligent ID verification application that integrates with Ghana's National Identification Authority (NIA) system. This application provides professional photo authentication through facial recognition technology with comprehensive security features and intuitive user interactions.
+
+## Documentation
+
+Comprehensive documentation is available in the `docs` directory:
+
+- [User Guide](docs/USER_GUIDE.md) - For end users of the system
+- [Admin Guide](docs/ADMIN_GUIDE.md) - For system administrators
+- [Developer Guide](docs/DEVELOPER_GUIDE.md) - For developers maintaining or extending the system
+- [Installation Guide](docs/INSTALLATION.md) - For setting up the system
+- [Documentation Overview](docs/README.md) - Summary of all documentation
 
 ## Features
 
@@ -51,7 +61,7 @@ A secure and intelligent ID verification application leveraging advanced image a
    npm run dev
    ```
 
-The application will be available at `http://localhost:5000`
+The application will be available at `http://localhost:5000` in development mode, or `http://localhost:8080` in production mode
 
 ## Project Structure
 
@@ -70,7 +80,7 @@ The application will be available at `http://localhost:5000`
 
 ## Features Overview
 
-### ID Verification Process
+### Ghana NIA Verification Process
 - Real-time face detection with bounding box display
 - Liveness detection through motion analysis
 - Image quality assessment including:
@@ -78,16 +88,23 @@ The application will be available at `http://localhost:5000`
   - Proper distance
   - Lighting conditions
   - Head positioning
+- Ghana Card number validation
+- Secure integration with Ghana NIA API
+- Side-by-side display of captured and API response images
+- Signature image display from Ghana NIA database
 
 ### User Dashboard
 - Verification history tracking
 - Status monitoring (pending/approved/rejected)
-- Statistical overview of verification attempts
+- Detailed verification results with NIA data
+- Mobile-optimized verification workflow
 
 ### Admin Features
 - Comprehensive verification management
-- User activity monitoring
+- User activity monitoring and approval
 - Verification statistics and analytics
+- Detailed API response viewing
+- Role-based access control
 
 ## Security Features
 
