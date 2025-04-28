@@ -28,96 +28,114 @@ const compressImage = (imageSrc: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      // Create temporary canvas for compression
-      const canvas = document.createElement('canvas');
-      
-      // Get original image dimensions
-      const origWidth = img.naturalWidth;
-      const origHeight = img.naturalHeight;
-      
-      // Check if this is a mobile device
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      console.log(`Device detected: ${isMobile ? 'Mobile' : 'Desktop'}`);
-      console.log(`Original image dimensions: ${origWidth}x${origHeight}`);
-      
-      // Always use exact API required dimensions - this is critical for Ghana NIA verification
-      const width = CAPTURE_WIDTH;  // 640px
-      const height = CAPTURE_HEIGHT; // 480px
+      try {
+        // Create temporary canvas for compression
+        const canvas = document.createElement('canvas');
+        
+        // Get original image dimensions
+        const origWidth = img.naturalWidth;
+        const origHeight = img.naturalHeight;
+        
+        // Check if this is a mobile device
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        console.log(`Device detected: ${isMobile ? 'Mobile' : 'Desktop'}`);
+        console.log(`Original image dimensions: ${origWidth}x${origHeight}`);
+        
+        // Always use the exact dimensions required by Ghana NIA API
+        const width = CAPTURE_WIDTH;  // 640px
+        const height = CAPTURE_HEIGHT; // 480px
 
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
 
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-
-      // Start with white background to avoid transparency issues
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, width, height);
-
-      // Enable image smoothing for better quality
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      // Calculate how to center and properly scale the image
-      // This ensures proper aspect ratio and no stretching/distortion
-      let drawWidth, drawHeight, xOffset, yOffset;
-      
-      // Calculate scaling to fit while maintaining aspect ratio
-      const scale = Math.min(width / origWidth, height / origHeight);
-      drawWidth = origWidth * scale;
-      drawHeight = origHeight * scale;
-      
-      // Center the image in the canvas
-      xOffset = (width - drawWidth) / 2;
-      yOffset = (height - drawHeight) / 2;
-      
-      // Draw image centered and properly scaled
-      ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
-
-      // Always use higher quality for verification images (especially on mobile)
-      // The Ghana NIA API needs clear, high-quality images
-      const quality = isMobile ? 0.95 : 0.85; // Higher quality for mobile
-      
-      // Use JPEG which is better for photos and required by the API
-      let compressedImage = canvas.toDataURL('image/jpeg', quality);
-      let base64Size = (compressedImage.length * 3) / 4;
-
-      // Only reduce quality as a last resort if image is too large
-      if (base64Size > MAX_FILE_SIZE) {
-        let adjustedQuality = 0.8;
-        while (base64Size > MAX_FILE_SIZE && adjustedQuality > 0.6) {
-          adjustedQuality -= 0.05;
-          compressedImage = canvas.toDataURL('image/jpeg', adjustedQuality);
-          base64Size = (compressedImage.length * 3) / 4;
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
         }
-        console.log(`Reduced quality to ${adjustedQuality.toFixed(2)} to meet size limit`);
+
+        // Create a completely clean white background
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+
+        // Enable image smoothing for better quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        // SPECIFIC HANDLING FOR MOBILE DEVICES
+        if (isMobile) {
+          console.log("Using mobile-specific image processing algorithm");
+          
+          // For mobile, use a more direct approach with exact dimensions
+          // This addresses the distortion issues common on mobile devices
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Use maximum quality for mobile - the API needs clarity
+          const mobileCompressedImage = canvas.toDataURL('image/jpeg', 0.95);
+          const mobileBase64Data = mobileCompressedImage.split(',')[1];
+          
+          console.log('Mobile image processing complete:', {
+            finalDimensions: `${width}x${height}`,
+            dataSize: (mobileBase64Data.length / 1024).toFixed(2) + 'KB',
+            quality: 0.95,
+            format: 'JPEG'
+          });
+          
+          resolve(mobileBase64Data);
+          return;
+        }
+        
+        // DESKTOP PROCESSING - more advanced with aspect ratio preservation
+        // Calculate scaling to fit while maintaining aspect ratio
+        const scale = Math.min(width / origWidth, height / origHeight);
+        const drawWidth = origWidth * scale;
+        const drawHeight = origHeight * scale;
+        
+        // Center the image in the canvas
+        const xOffset = (width - drawWidth) / 2;
+        const yOffset = (height - drawHeight) / 2;
+        
+        // Draw image centered and properly scaled
+        ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
+
+        // For desktop, use slightly lower quality but still good
+        const quality = 0.9;
+        
+        // Use JPEG which is better for photos and required by the API
+        const compressedImage = canvas.toDataURL('image/jpeg', quality);
+        
+        // Get final size
+        const base64Size = (compressedImage.length * 3) / 4;
+
+        if (base64Size > MAX_FILE_SIZE) {
+          reject(new Error(`Image size (${(base64Size / 1024).toFixed(2)}KB) exceeds limit. Try moving closer to the camera or ensuring better lighting.`));
+          return;
+        }
+
+        // Convert to base64 without the data URL prefix
+        const base64Data = compressedImage.split(',')[1];
+        console.log('Desktop image compression details:', {
+          originalDimensions: `${origWidth}x${origHeight}`,
+          finalDimensions: `${width}x${height}`,
+          drawDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
+          originalSize: (imageSrc.length / 1024).toFixed(2) + 'KB',
+          compressedSize: (base64Data.length / 1024).toFixed(2) + 'KB',
+          quality: quality,
+          format: 'JPEG'
+        });
+
+        resolve(base64Data);
+      } catch (err) {
+        console.error('Image processing error:', err);
+        reject(new Error(`Image processing failed: ${err instanceof Error ? err.message : 'Unknown error'}`));
       }
-
-      if (base64Size > MAX_FILE_SIZE) {
-        reject(new Error(`Image size (${(base64Size / 1024).toFixed(2)}KB) exceeds limit. Try moving closer to the camera or ensuring better lighting.`));
-        return;
-      }
-
-      // Convert to base64 without the data URL prefix
-      const base64Data = compressedImage.split(',')[1];
-      console.log('Image compression details:', {
-        device: isMobile ? 'Mobile' : 'Desktop',
-        originalDimensions: `${origWidth}x${origHeight}`,
-        finalDimensions: `${width}x${height}`,
-        drawDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
-        originalSize: (imageSrc.length / 1024).toFixed(2) + 'KB',
-        compressedSize: (base64Data.length / 1024).toFixed(2) + 'KB',
-        quality: quality,
-        format: 'JPEG'
-      });
-
-      resolve(base64Data);
     };
 
-    img.onerror = () => reject(new Error('Failed to load image'));
+    img.onerror = (err) => {
+      console.error('Failed to load image for processing:', err);
+      reject(new Error('Failed to load image. Please try again with better lighting.'));
+    };
+    
     img.src = imageSrc;
   });
 };
@@ -456,6 +474,12 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
   const capture = useCallback(async () => {
     setError(null);
+    
+    // Detect mobile device
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    console.log(`Device capturing image: ${isMobile ? 'Mobile' : 'Desktop'}`);
+    
+    // Use specific settings for mobile vs desktop
     const imageSrc = webcamRef.current?.getScreenshot({
       width: CAPTURE_WIDTH,
       height: CAPTURE_HEIGHT
@@ -467,8 +491,12 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     }
 
     try {
-      const compressedImage = await compressImage(imageSrc);
-
+      // For mobile devices, we'll do extra verification
+      if (isMobile) {
+        console.log("Using mobile-specific image processing");
+      }
+      
+      // Validation checks before processing
       if (!faceDetected) {
         setError("No face detected in frame");
         return;
@@ -484,7 +512,7 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         return;
       }
 
-      const { brightness, contrast } = await analyzeLighting(imageSrc); // analyzeLighting should use original imageSrc, not compressed
+      const { brightness, contrast } = await analyzeLighting(imageSrc);
       if (brightness < MIN_BRIGHTNESS || brightness > MAX_BRIGHTNESS) {
         setError("Poor lighting conditions. Please adjust lighting.");
         return;
@@ -494,9 +522,22 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         return;
       }
 
+      // Process the image with our improved compression method
+      // This handles different mobile/desktop requirements
+      const compressedImage = await compressImage(imageSrc);
+      
+      // Additional check for mobile devices
+      if (isMobile && compressedImage.length < 5000) {
+        setError("Image quality is too low. Please ensure good lighting and position.");
+        return;
+      }
+      
+      // Store the processed image for display and submission
       setCapturedImage(compressedImage);
+      
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to process image");
+      console.error("Image capture error:", error);
     }
   }, [faceDetected, isLive, imageQuality.score]);
 

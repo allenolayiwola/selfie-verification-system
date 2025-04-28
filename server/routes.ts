@@ -317,6 +317,10 @@ export function registerRoutes(app: Express): Server {
     const { pinNumber, imageData } = req.body;
     const merchantKey = "5ce32d6e-2140-413a-935d-dbbb74c65439";
     
+    // User agent detection for mobile handling
+    const userAgent = req.headers['user-agent'] || '';
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+    console.log('Device type:', isMobile ? 'Mobile' : 'Desktop');
     console.log('PIN number present:', !!pinNumber, 'Image data present:', !!imageData);
 
     try {
@@ -333,12 +337,22 @@ export function registerRoutes(app: Express): Server {
         console.log('Image data validation failed');
         return res.status(400).json({ error: "Image data is required" });
       }
+      
+      // Check for potentially corrupted image data
+      if (imageData.length < 1000) {
+        console.error('Image data appears truncated or corrupted');
+        return res.status(422).json({ 
+          error: "Invalid image data", 
+          details: "The image data is too small or corrupted. Please retake the photo." 
+        });
+      }
 
       // Log request size and format details
       console.log('Verification request details:', {
         contentLength: req.headers['content-length'],
         contentType: req.headers['content-type'],
         imageDataLength: imageData.length,
+        isMobile: isMobile,
         imageSizeInMB: (imageData.length / (1024 * 1024)).toFixed(2) + 'MB'
       });
 
