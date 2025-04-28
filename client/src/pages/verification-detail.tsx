@@ -65,6 +65,43 @@ export default function VerificationDetailPage() {
     }
   };
   
+  // Function to extract formatted personal information from API response
+  const extractPersonalInfo = (jsonString: string) => {
+    try {
+      const jsonData = JSON.parse(jsonString);
+      
+      // Check if the response has the expected structure
+      if (jsonData.data && jsonData.data.person) {
+        const person = jsonData.data.person;
+        return {
+          nationalId: person.nationalId || 'N/A',
+          cardId: person.cardId || 'N/A',
+          cardValidFrom: person.cardValidFrom || 'N/A',
+          cardValidTo: person.cardValidTo || 'N/A',
+          surname: person.surname || 'N/A',
+          forenames: person.forenames || 'N/A',
+          fullName: `${person.forenames || ''} ${person.surname || ''}`.trim() || 'N/A',
+          nationality: person.nationality || 'N/A',
+          birthDate: person.birthDate || 'N/A',
+          gender: person.gender || 'N/A',
+          birthCountry: person.birthCountry || 'N/A',
+          birthTown: person.birthTown || 'N/A',
+          addresses: person.addresses || [],
+          contact: person.contact || {},
+          verified: jsonData.data.verified === "TRUE" || jsonData.data.verified === true,
+          transactionId: jsonData.data.transactionGuid || 'N/A',
+          requestTimestamp: jsonData.data.requestTimestamp || 'N/A',
+          responseTimestamp: jsonData.data.responseTimestamp || 'N/A'
+        };
+      }
+      
+      return null;
+    } catch (e) {
+      console.error("Error extracting personal info:", e);
+      return null;
+    }
+  };
+  
   // Function to extract and display the base64 image from the API response
   const extractImageFromResponse = (jsonString: string): string | null => {
     try {
@@ -360,12 +397,219 @@ export default function VerificationDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* API Response Card */}
+              {/* Formatted Personal Information Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">API Response Data</CardTitle>
+                  <CardTitle className="text-xl">Verification Information</CardTitle>
                   <CardDescription>
-                    Raw data returned by the verification API
+                    Personal information from the verification API
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {extractPersonalInfo(verification.response) ? (
+                    <div className="space-y-4">
+                      {/* Transaction Details */}
+                      <div>
+                        <h3 className="font-medium text-base mb-2 text-primary">Transaction Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Transaction ID:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.transactionId}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Verification Status:</span>
+                            <p className="font-medium">
+                              <Badge className={extractPersonalInfo(verification.response)?.verified 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-red-100 text-red-800"}>
+                                {extractPersonalInfo(verification.response)?.verified ? "Verified" : "Not Verified"}
+                              </Badge>
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Request Time:</span>
+                            <p className="font-medium">{new Date(extractPersonalInfo(verification.response)?.requestTimestamp || '').toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Response Time:</span>
+                            <p className="font-medium">{new Date(extractPersonalInfo(verification.response)?.responseTimestamp || '').toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ID Card Information */}
+                      <div>
+                        <h3 className="font-medium text-base mb-2 text-primary">ID Card Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">National ID:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.nationalId}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Card ID:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.cardId}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Valid From:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.cardValidFrom}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Valid To:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.cardValidTo}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Personal Information */}
+                      <div>
+                        <h3 className="font-medium text-base mb-2 text-primary">Personal Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Full Name:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.fullName}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Gender:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.gender}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Date of Birth:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.birthDate}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Nationality:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.nationality}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Birth Country:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.birthCountry}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Birth Town:</span>
+                            <p className="font-medium">{extractPersonalInfo(verification.response)?.birthTown}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Address Information */}
+                      {extractPersonalInfo(verification.response)?.addresses && 
+                       extractPersonalInfo(verification.response)?.addresses.length > 0 && (
+                        <div>
+                          <h3 className="font-medium text-base mb-2 text-primary">Address Information</h3>
+                          <div className="space-y-3">
+                            {extractPersonalInfo(verification.response)?.addresses.map((address: any, index: number) => (
+                              <div key={index} className="p-3 border rounded-md">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Type:</span>
+                                    <p className="font-medium">{address.type || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Community:</span>
+                                    <p className="font-medium">{address.community || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Town:</span>
+                                    <p className="font-medium">{address.town || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">District:</span>
+                                    <p className="font-medium">{address.districtName || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Region:</span>
+                                    <p className="font-medium">{address.region || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Country:</span>
+                                    <p className="font-medium">{address.countryName || 'N/A'}</p>
+                                  </div>
+                                  {address.addressDigital && (
+                                    <div>
+                                      <span className="text-muted-foreground">Digital Address:</span>
+                                      <p className="font-medium">{address.addressDigital}</p>
+                                    </div>
+                                  )}
+                                </div>
+                                {/* GPS Information */}
+                                {address.gpsAddressDetails && (
+                                  <div className="mt-3 pt-3 border-t">
+                                    <h4 className="font-medium text-sm mb-2">GPS Details</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                      <div>
+                                        <span className="text-muted-foreground">GPS Name:</span>
+                                        <p className="font-medium">{address.gpsAddressDetails.gpsName || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Area:</span>
+                                        <p className="font-medium">{address.gpsAddressDetails.area || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Street:</span>
+                                        <p className="font-medium">{address.gpsAddressDetails.street || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Coordinates:</span>
+                                        <p className="font-medium">
+                                          {address.gpsAddressDetails.latitude && address.gpsAddressDetails.longitude 
+                                           ? `${address.gpsAddressDetails.latitude}, ${address.gpsAddressDetails.longitude}` 
+                                           : 'N/A'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Contact Information */}
+                      {extractPersonalInfo(verification.response)?.contact && (
+                        <div>
+                          <h3 className="font-medium text-base mb-2 text-primary">Contact Information</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            {extractPersonalInfo(verification.response)?.contact.email && (
+                              <div>
+                                <span className="text-muted-foreground">Email:</span>
+                                <p className="font-medium">{extractPersonalInfo(verification.response)?.contact.email}</p>
+                              </div>
+                            )}
+                            
+                            {extractPersonalInfo(verification.response)?.contact.phoneNumbers && 
+                             extractPersonalInfo(verification.response)?.contact.phoneNumbers.length > 0 && (
+                              <div>
+                                <span className="text-muted-foreground">Phone:</span>
+                                <div className="space-y-1">
+                                  {extractPersonalInfo(verification.response)?.contact.phoneNumbers.map((phone: any, index: number) => (
+                                    <p key={index} className="font-medium">
+                                      {phone.type && `${phone.type}: `}{phone.phoneNumber || 'N/A'}
+                                      {phone.network && ` (${phone.network})`}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-muted-foreground p-8 border border-dashed rounded-md">
+                      <AlertCircle className="h-12 w-12 mb-2" />
+                      <p>Unable to extract formatted verification information</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Raw API Response Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Raw API Response</CardTitle>
+                  <CardDescription>
+                    Raw JSON data returned by the verification API
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
