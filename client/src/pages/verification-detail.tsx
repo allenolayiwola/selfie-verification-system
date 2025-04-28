@@ -383,7 +383,7 @@ export default function VerificationDetailPage() {
                     {/* Captured Image */}
                     <div>
                       <h3 className="font-medium text-base mb-3 text-center">Captured Image</h3>
-                      {verification.imageData ? (
+                      {verification.imageData && verification.imageData.length > 0 ? (
                         <div className="rounded-md overflow-hidden border border-border h-[300px] flex items-center justify-center">
                           <img 
                             src={verification.imageData.startsWith('data:image') 
@@ -391,6 +391,17 @@ export default function VerificationDetailPage() {
                               : `data:image/jpeg;base64,${verification.imageData}`} 
                             alt="Captured Image" 
                             className="max-w-full h-auto object-contain max-h-[300px]"
+                            onError={(e) => {
+                              console.error('Error loading captured image:', e);
+                              // Set fallback message on error
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.innerHTML = 
+                                  '<div class="flex flex-col items-center justify-center text-muted-foreground p-8 h-full w-full">' +
+                                  '<p>Image could not be displayed</p>' +
+                                  '<p class="text-xs mt-2">Image data may be corrupted or in an unsupported format</p>' +
+                                  '</div>';
+                              }
+                            }}
                           />
                         </div>
                       ) : (
@@ -413,6 +424,15 @@ export default function VerificationDetailPage() {
                             src={extractImageFromResponse(verification.response)!} 
                             alt="API Response Image" 
                             className="max-w-full h-auto object-contain max-h-[300px]"
+                            onError={(e) => {
+                              console.error('Error loading API response image:', e);
+                              // Set fallback message on error
+                              e.currentTarget.parentElement.innerHTML = 
+                                '<div class="flex flex-col items-center justify-center text-muted-foreground p-8 h-full w-full">' +
+                                '<p>Image could not be displayed</p>' +
+                                '<p class="text-xs mt-2">API response image may be corrupted or in an unsupported format</p>' +
+                                '</div>';
+                            }}
                           />
                         </div>
                       ) : (

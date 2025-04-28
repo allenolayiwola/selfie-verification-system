@@ -516,26 +516,48 @@ export function registerRoutes(app: Express): Server {
         sampleStart: imageData ? imageData.substring(0, 30) + '...' : 'none'
       });
       
+      // Process the image data to ensure it's not empty
+      const processedImageData = imageData && imageData.length > 0 ? imageData : null;
+      console.log('Image data for storing:', {
+        originalImageDataLength: imageData ? imageData.length : 0,
+        processedImageDataLength: processedImageData ? processedImageData.length : 0,
+        isImageDataNull: processedImageData === null,
+        isOriginalImageDataNull: imageData === null
+      });
+
       // Store verification metadata along with the image data in database
       try {
         const [verification] = await db.insert(verifications).values({
           userId: req.user.id,
           merchantId: merchantKey,
           pinNumber,
-          imageData, // Store the actual image data
+          imageData: processedImageData, // Store the processed image data
           status: verificationStatus as "pending" | "approved" | "rejected", // Type assertion for proper status value
           response: JSON.stringify(responseData)
         }).returning();
         
         console.log('Verification stored in database with ID:', verification.id);
-        // Log the stored image data length
+        
+        // Check if the image data was stored correctly
         const [storedVerification] = await db
-          .select({ imageDataLength: sql`length(${verifications.imageData})` })
+          .select({ 
+            imageDataLength: sql`length(${verifications.imageData})`,
+            imageDataSample: sql`substring(${verifications.imageData}, 1, 30)`
+          })
           .from(verifications)
           .where(eq(verifications.id, verification.id))
           .limit(1);
         
-        console.log('Stored image data length:', storedVerification?.imageDataLength || 0);
+        if (storedVerification) {
+          console.log('Stored image data length:', storedVerification.imageDataLength);
+          console.log('Image data sample:', storedVerification.imageDataSample);
+          
+          if (storedVerification.imageDataLength === 0) {
+            console.error('WARNING: Image data was not stored correctly!');
+          }
+        } else {
+          console.error('Could not retrieve stored verification data!');
+        }
       } catch (dbError) {
         console.error('Error storing verification data:', dbError);
         throw dbError;
