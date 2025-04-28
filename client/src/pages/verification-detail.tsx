@@ -70,7 +70,21 @@ export default function VerificationDetailPage() {
     try {
       const jsonData = JSON.parse(jsonString);
       
-      // Check different possible locations for the image data in the API response
+      // Check for the Ghana NIA API specific structure we've identified
+      // data.person.biometricFeed.face.data
+      if (jsonData.data && 
+          jsonData.data.person && 
+          jsonData.data.person.biometricFeed && 
+          jsonData.data.person.biometricFeed.face &&
+          jsonData.data.person.biometricFeed.face.data) {
+        
+        const imageData = jsonData.data.person.biometricFeed.face.data;
+        const dataType = jsonData.data.person.biometricFeed.face.dataType?.toLowerCase() || 'jpeg';
+        
+        return `data:image/${dataType};base64,${imageData}`;
+      }
+      
+      // Check other possible locations for the image data in the API response
       if (jsonData.image && typeof jsonData.image === 'string') {
         // If the API returns the image directly
         return jsonData.image.startsWith('data:image') 
@@ -88,18 +102,47 @@ export default function VerificationDetailPage() {
           : `data:image/jpeg;base64,${jsonData.response.image}`;
       }
       
-      // Look for any property that might contain base64 data
-      for (const key in jsonData) {
-        if (typeof jsonData[key] === 'string' && 
-            (jsonData[key].startsWith('data:image') || 
-             jsonData[key].length > 500 && /^[A-Za-z0-9+/=]+$/.test(jsonData[key]))) {
-          return jsonData[key].startsWith('data:image') 
-            ? jsonData[key] 
-            : `data:image/jpeg;base64,${jsonData[key]}`;
-        }
+      // Check for face data using different key paths
+      if (jsonData.biometricFeed && jsonData.biometricFeed.face && jsonData.biometricFeed.face.data) {
+        const imageData = jsonData.biometricFeed.face.data;
+        const dataType = jsonData.biometricFeed.face.dataType?.toLowerCase() || 'jpeg';
+        return `data:image/${dataType};base64,${imageData}`;
       }
       
-      return null;
+      // Check for other deep nested paths
+      if (jsonData.person && jsonData.person.biometricData) {
+        return `data:image/jpeg;base64,${jsonData.person.biometricData}`;
+      }
+      
+      // Look for any property that might contain base64 data
+      const searchForBase64 = (obj: any, depth = 0): string | null => {
+        if (depth > 5) return null; // Limit search depth to prevent excessive recursion
+        
+        if (typeof obj === 'string' && 
+            (obj.startsWith('data:image') || 
+             obj.length > 500 && /^[A-Za-z0-9+/=]+$/.test(obj))) {
+          return obj.startsWith('data:image') ? obj : `data:image/jpeg;base64,${obj}`;
+        }
+        
+        if (typeof obj === 'object' && obj !== null) {
+          for (const key in obj) {
+            if (key === 'data' || key === 'image' || key === 'face' || key === 'biometricData' || key === 'biometricFeed') {
+              const result = searchForBase64(obj[key], depth + 1);
+              if (result) return result;
+            }
+          }
+          
+          // If we didn't find anything in the priority keys, search all keys
+          for (const key in obj) {
+            const result = searchForBase64(obj[key], depth + 1);
+            if (result) return result;
+          }
+        }
+        
+        return null;
+      };
+      
+      return searchForBase64(jsonData);
     } catch (e) {
       console.error("Error extracting image:", e);
       return null;
