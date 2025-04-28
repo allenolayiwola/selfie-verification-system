@@ -62,22 +62,42 @@ const compressImage = (imageSrc: string): Promise<string> => {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // SPECIFIC HANDLING FOR MOBILE DEVICES
+        // ENHANCED MOBILE HANDLING - Fixes distortion issues
         if (isMobile) {
-          console.log("Using mobile-specific image processing algorithm");
+          console.log("Using enhanced mobile-specific image processing algorithm");
           
-          // For mobile, use a more direct approach with exact dimensions
-          // This addresses the distortion issues common on mobile devices
-          ctx.drawImage(img, 0, 0, width, height);
+          // Clear the canvas first
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
           
-          // Use maximum quality for mobile - the API needs clarity
-          const mobileCompressedImage = canvas.toDataURL('image/jpeg', 0.95);
+          // Calculate scaling to fit while maintaining aspect ratio (4:3) for NIA requirements
+          // This is the key fix for mobile distortion issues
+          const scale = Math.min(width / origWidth, height / origHeight);
+          const drawWidth = origWidth * scale;
+          const drawHeight = origHeight * scale;
+          
+          // Center the image in the canvas
+          const xOffset = (width - drawWidth) / 2;
+          const yOffset = (height - drawHeight) / 2;
+          
+          console.log('Mobile scaling details:', {
+            originalDimensions: `${origWidth}x${origHeight}`,
+            scaleFactor: scale.toFixed(2),
+            newDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
+            offsets: `x:${xOffset.toFixed(0)}, y:${yOffset.toFixed(0)}`
+          });
+          
+          // Draw image centered and properly scaled to avoid stretching
+          ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
+          
+          // Use higher quality for mobile - the API needs clarity without too much compression
+          const mobileCompressedImage = canvas.toDataURL('image/jpeg', 0.92);
           const mobileBase64Data = mobileCompressedImage.split(',')[1];
           
           console.log('Mobile image processing complete:', {
             finalDimensions: `${width}x${height}`,
             dataSize: (mobileBase64Data.length / 1024).toFixed(2) + 'KB',
-            quality: 0.95,
+            quality: 0.92,
             format: 'JPEG'
           });
           
@@ -475,11 +495,13 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
   const capture = useCallback(async () => {
     setError(null);
     
-    // Detect mobile device
+    // Detect mobile device with enhanced logging
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     console.log(`Device capturing image: ${isMobile ? 'Mobile' : 'Desktop'}`);
+    console.log('Webcam dimensions:', CAPTURE_WIDTH, 'x', CAPTURE_HEIGHT);
     
-    // Use specific settings for mobile vs desktop
+    // Use specific settings for mobile vs desktop with fixed dimensions
+    // This is critical for fixing the mobile aspect ratio issues
     const imageSrc = webcamRef.current?.getScreenshot({
       width: CAPTURE_WIDTH,
       height: CAPTURE_HEIGHT
@@ -491,9 +513,17 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     }
 
     try {
-      // For mobile devices, we'll do extra verification
+      // Log the image details for debugging
+      console.log('Image capture details:', {
+        imageLength: imageSrc.length,
+        isDataURL: imageSrc.includes('data:image'),
+        format: imageSrc.includes('jpeg') ? 'JPEG' : 'PNG',
+        device: isMobile ? 'Mobile' : 'Desktop'
+      });
+      
+      // Enhanced mobile-specific handling
       if (isMobile) {
-        console.log("Using mobile-specific image processing");
+        console.log("Using enhanced mobile-specific image processing");
       }
       
       // Validation checks before processing
@@ -613,15 +643,27 @@ export default function WebcamCapture({ onCapture }: WebcamCaptureProps) {
               facingMode: "user"
             }}
             className="w-full"
+            style={{ 
+              objectFit: "contain",
+              aspectRatio: "4/3",
+              maxWidth: "100%",
+              margin: "0 auto"
+            }}
           />
         ) : (
           <div className="relative">
             <img
               src={capturedImage.startsWith('data:image') 
                 ? capturedImage
-                : `data:image/jpeg;base64,${capturedImage}`} // Add data URL prefix with correct format
+                : `data:image/jpeg;base64,${capturedImage}`}
               alt="Captured"
-              className="w-full h-auto"
+              className="w-full object-contain"
+              style={{ 
+                aspectRatio: '4/3',
+                maxHeight: CAPTURE_HEIGHT,
+                maxWidth: CAPTURE_WIDTH,
+                margin: '0 auto'
+              }}
               onError={(e) => {
                 console.error('Error displaying captured image. Trying PNG format...');
                 // Try PNG as fallback
