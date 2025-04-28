@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/navbar";
 import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
+import { useEffect } from "react";
 
 interface VerificationDetail {
   id: number;
@@ -29,11 +30,24 @@ export default function VerificationDetailPage() {
   const params = useParams<{ id: string }>();
   const id = parseInt(params.id, 10);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // Use the useAuth hook to get the user role
   const { user } = useAuth();
   
-  // Make sure we include the query function to set credentials properly
+  // Redirect non-admin users
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can view verification details",
+        variant: "destructive"
+      });
+      setLocation("/history");
+    }
+  }, [user, setLocation, toast]);
+  
+  // Don't even attempt the query if user is not admin
   const { data: verification, isLoading, error } = useQuery<VerificationDetail>({
     queryKey: [`/api/verifications/${id}`],
     enabled: !isNaN(id) && user?.role === "admin", // Only enable for admin users
@@ -99,12 +113,14 @@ export default function VerificationDetailPage() {
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
-              <Link href="/history">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Verification History
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setLocation("/history")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Verification History
+              </Button>
             </div>
             <Card className="border-destructive">
               <CardHeader className="bg-destructive/10">
@@ -117,9 +133,9 @@ export default function VerificationDetailPage() {
                 <p>{error?.message || "Unknown error"}</p>
               </CardContent>
               <CardFooter>
-                <Link href="/history">
-                  <Button>Return to Verification History</Button>
-                </Link>
+                <Button onClick={() => setLocation("/history")}>
+                  Return to Verification History
+                </Button>
               </CardFooter>
             </Card>
           </div>
@@ -145,12 +161,14 @@ export default function VerificationDetailPage() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <Link href="/history">
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Verification History
-            </Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => setLocation("/history")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Verification History
+          </Button>
           <Button 
             onClick={downloadVerificationData}
             className="flex items-center gap-2"
