@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowLeft, CheckCircle, XCircle, Clock, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Navbar from "@/components/navbar";
 
 interface VerificationDetail {
   id: number;
@@ -27,10 +28,22 @@ export default function VerificationDetailPage() {
   const id = parseInt(params.id, 10);
   const { toast } = useToast();
 
-  const { data: verification, isLoading, error } = useQuery<VerificationDetail>({
+  const { data: verification, isLoading, error } = useQuery({
     queryKey: [`/api/verifications/${id}`],
-    enabled: !isNaN(id)
-  });
+    enabled: !isNaN(id),
+    retry: 1, // Limit retries to avoid spamming the server
+    onSuccess: (data: any) => {
+      console.log("Successfully fetched verification details:", data);
+    },
+    onError: (err: Error) => {
+      console.error("Error fetching verification details:", err);
+      toast({
+        title: "Error loading verification",
+        description: err.message || "Could not load verification details",
+        variant: "destructive"
+      });
+    }
+  }) as { data: VerificationDetail | undefined, isLoading: boolean, error: Error | null };
 
   // Function to format JSON for display
   const formatJsonResponse = (jsonString: string) => {
@@ -71,40 +84,50 @@ export default function VerificationDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh]">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading verification details...</p>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center min-h-[50vh]">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Loading verification details...</p>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (error || !verification) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
-        <div className="flex justify-between items-center mb-6">
-          <Link href="/verification-history">
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Verification History
-            </Button>
-          </Link>
-        </div>
-        <Card className="border-destructive">
-          <CardHeader className="bg-destructive/10">
-            <CardTitle className="text-destructive">Error Loading Verification</CardTitle>
-            <CardDescription>
-              Could not load the verification details. The verification may have been deleted or you may not have permission to view it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <p>{error?.message || "Unknown error"}</p>
-          </CardContent>
-          <CardFooter>
-            <Link href="/verification-history">
-              <Button>Return to Verification History</Button>
-            </Link>
-          </CardFooter>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <Link href="/history">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Verification History
+                </Button>
+              </Link>
+            </div>
+            <Card className="border-destructive">
+              <CardHeader className="bg-destructive/10">
+                <CardTitle className="text-destructive">Error Loading Verification</CardTitle>
+                <CardDescription>
+                  Could not load the verification details. The verification may have been deleted or you may not have permission to view it.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <p>{error?.message || "Unknown error"}</p>
+              </CardContent>
+              <CardFooter>
+                <Link href="/history">
+                  <Button>Return to Verification History</Button>
+                </Link>
+              </CardFooter>
+            </Card>
+          </div>
+        </main>
       </div>
     );
   }
@@ -124,7 +147,7 @@ export default function VerificationDetailPage() {
   return (
     <div className="container mx-auto p-6 max-w-5xl">
       <div className="flex justify-between items-center mb-6">
-        <Link href="/verification-history">
+        <Link href="/history">
           <Button variant="outline" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Verification History
