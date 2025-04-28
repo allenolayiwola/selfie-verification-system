@@ -382,19 +382,12 @@ export function registerRoutes(app: Express): Server {
       // The API might be expecting the exact format with hyphens included
       // Format: GHA-xxxxxxxx-x
       
-      // Using merchantKey as requested
-      // Try a different approach - specify pin exactly as first property
+      // Updated request format as per API owner's instructions
       const requestBody = {
-        pin: trimmedPinNumber, // PIN in correct GHA-xxxxxxxx-x format
+        dataType: "JPG", // API requires this field - indicates photo format
         image: base64Data,
-        merchantKey: merchantKey // Keep using merchantKey as requested
-      };
-      
-      // Make a different JSON structure that might be more compatible with API
-      const requestBodyAlternate: Record<string, string> = {
-        pin: trimmedPinNumber,
-        image: base64Data,
-        merchantKey: merchantKey
+        pinNumber: trimmedPinNumber, // Using pinNumber instead of pin as required
+        merchantKey: merchantKey // Still need to include the merchant key
       };
       
       // These logs are now redundant with our enhanced logging below
@@ -420,17 +413,17 @@ export function registerRoutes(app: Express): Server {
       console.log('JSON Sample:', requestBodyJSON.substring(0, 100) + '...');
       console.log('Original Field Names:', Object.keys(requestBody));
       console.log('Field Types:', {
-        pin: typeof requestBody.pin,
+        dataType: typeof requestBody.dataType,
         image: typeof requestBody.image,
-        merchantKey: typeof requestBody.merchantKey
+        pinNumber: typeof requestBody.pinNumber
       });
       
       // Let's also log the exact field names (crucial for debugging)
       console.log('\nFIELD NAME CHECK:');
       console.log('==============');
       console.log('Field names exactly as sent in requestBody:', {
-        hasPinField: 'pin' in requestBody,
-        hasPINField: 'PIN' in requestBody,
+        hasDataTypeField: 'dataType' in requestBody,
+        hasPinNumberField: 'pinNumber' in requestBody, 
         hasImageField: 'image' in requestBody,
         hasMerchantKeyField: 'merchantKey' in requestBody
       });
@@ -444,18 +437,7 @@ export function registerRoutes(app: Express): Server {
       console.log('=======================');
       console.log(JSON.stringify(requestBodyForLog, null, 2));
       
-      // Now log the alternate request body
-      console.log('\nREQUEST BODY 2 (Alternate):');
-      console.log('========================');
-      const requestBodyAlternateJSON = JSON.stringify(requestBodyAlternate);
-      console.log('JSON Length:', requestBodyAlternateJSON.length);
-      console.log('JSON Sample:', requestBodyAlternateJSON.substring(0, 100) + '...');
-      console.log('Alternate Field Names:', Object.keys(requestBodyAlternate));
-      console.log('Field Types:', {
-        pin: typeof requestBodyAlternate.pin,
-        image: typeof requestBodyAlternate.image,
-        merchantKey: typeof requestBodyAlternate.merchantKey
-      });
+      // We no longer need alternate request body logging since we're using the correct format now
 
       // Check for any potential encoding issues with the PIN
       console.log('\nPOSSIBLE ENCODING ISSUES:');
@@ -470,15 +452,14 @@ export function registerRoutes(app: Express): Server {
       console.log('Request Method:', 'POST');
       console.log('Content-Type:', 'application/json');
 
-      // Call external API
-      // Let's try the alternate request body structure
+      // Call external API with updated request format
       const apiResponse = await fetch('https://selfie.imsgh.org:2035/skyface/api/v1/third-party/verification/base_64', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(requestBodyAlternate)
+        body: JSON.stringify(requestBody)
       });
 
       const responseData = await apiResponse.json();
