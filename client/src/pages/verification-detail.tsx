@@ -187,6 +187,67 @@ export default function VerificationDetailPage() {
     }
   };
 
+  // Function to extract signature from API response
+  const extractSignatureFromResponse = (jsonString: string): string | null => {
+    try {
+      const jsonData = JSON.parse(jsonString);
+      
+      // Check for Ghana NIA API signature in biometricFeed
+      if (jsonData.data?.person?.biometricFeed?.signature?.data) {
+        const signatureData = jsonData.data.person.biometricFeed.signature.data;
+        const dataType = jsonData.data.person.biometricFeed.signature.dataType?.toLowerCase() || 'jpeg';
+        return `data:image/${dataType};base64,${signatureData}`;
+      }
+      
+      // Check in binaries array for signature type
+      if (jsonData.data?.person?.binaries && Array.isArray(jsonData.data.person.binaries)) {
+        const signatureBinary = jsonData.data.person.binaries.find(
+          (binary: any) => binary.type === 'SIGNATURE' || binary.type?.toLowerCase() === 'signature'
+        );
+        
+        if (signatureBinary?.data) {
+          const dataType = signatureBinary.dataType?.toLowerCase() || 'jpeg';
+          return `data:image/${dataType};base64,${signatureBinary.data}`;
+        }
+      }
+      
+      // Use the same deep search approach as extractImageFromResponse but looking for signature keys
+      const searchForSignature = (obj: any, depth = 0): string | null => {
+        if (depth > 5) return null; // Limit search depth
+        
+        // Check if this is a base64 string that might be a signature
+        if (typeof obj === 'string' && 
+            (obj.startsWith('data:image') || 
+             obj.length > 100 && /^[A-Za-z0-9+/=]+$/.test(obj))) {
+          return obj.startsWith('data:image') ? obj : `data:image/jpeg;base64,${obj}`;
+        }
+        
+        if (typeof obj === 'object' && obj !== null) {
+          // First check signature-related keys with higher priority
+          for (const key in obj) {
+            if (key === 'signature' || key === 'sign' || key.includes('signature') || key.includes('sign')) {
+              const result = searchForSignature(obj[key], depth + 1);
+              if (result) return result;
+            }
+          }
+          
+          // Then check all other keys
+          for (const key in obj) {
+            const result = searchForSignature(obj[key], depth + 1);
+            if (result) return result;
+          }
+        }
+        
+        return null;
+      };
+      
+      return searchForSignature(jsonData);
+    } catch (e) {
+      console.error("Error extracting signature from API response:", e);
+      return null;
+    }
+  };
+  
   // Function to download verification data as JSON file
   const downloadVerificationData = () => {
     if (!verification) return;
@@ -447,6 +508,44 @@ export default function VerificationDetailPage() {
                         Official image returned from Ghana NIA database
                       </p>
                     </div>
+                  </div>
+                  
+                  {/* Signature Display Section */}
+                  <div className="mt-6">
+                    <Separator className="mb-6" />
+                    <h3 className="font-medium text-lg mb-4 text-center">Signature</h3>
+                    
+                    {extractSignatureFromResponse(verification.response) ? (
+                      <div className="flex flex-col items-center">
+                        <div className="rounded-md overflow-hidden border border-border max-w-md w-full h-[100px] flex items-center justify-center">
+                          <img 
+                            src={extractSignatureFromResponse(verification.response)!} 
+                            alt="Signature" 
+                            className="max-w-full h-auto object-contain max-h-[100px]"
+                            onError={(e) => {
+                              console.error('Error loading signature image:', e);
+                              // Set fallback message on error
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.innerHTML = 
+                                  '<div class="flex flex-col items-center justify-center text-muted-foreground p-8 h-full w-full">' +
+                                  '<p>Signature could not be displayed</p>' +
+                                  '<p class="text-xs mt-2">Signature data may be corrupted or in an unsupported format</p>' +
+                                  '</div>';
+                              }
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                          Official signature from Ghana NIA database
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-muted-foreground p-8 border border-dashed rounded-md">
+                        <AlertCircle className="h-12 w-12 mb-2" />
+                        <p>No signature found in API response</p>
+                        <p className="text-xs mt-2">Signature data might not be available in this verification</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
