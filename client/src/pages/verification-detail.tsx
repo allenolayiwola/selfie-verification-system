@@ -145,109 +145,112 @@ export default function VerificationDetailPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl">
-      <div className="flex justify-between items-center mb-6">
-        <Link href="/history">
-          <Button variant="outline" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Verification History
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <main className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <Link href="/history">
+            <Button variant="outline" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Verification History
+            </Button>
+          </Link>
+          <Button 
+            onClick={downloadVerificationData}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download Response Data
           </Button>
-        </Link>
-        <Button 
-          onClick={downloadVerificationData}
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Download Response Data
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Verification #{verification.id}</CardTitle>
-              <CardDescription>
-                Created on {new Date(verification.createdAt).toLocaleString()}
-              </CardDescription>
-              <div className="mt-2">
-                <Badge 
-                  className={statusColor[verification.status]}
-                  variant="outline"
-                >
-                  <div className="flex items-center gap-1">
-                    {statusIcon[verification.status]}
-                    <span className="capitalize">{verification.status}</span>
-                  </div>
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <h3 className="font-medium text-lg mb-2">User Information</h3>
-              <div className="space-y-2">
-                <div>
-                  <span className="text-muted-foreground">Username:</span>
-                  <p className="font-medium">{verification.username}</p>
-                </div>
-                {verification.fullName && (
-                  <div>
-                    <span className="text-muted-foreground">Full Name:</span>
-                    <p className="font-medium">{verification.fullName}</p>
-                  </div>
-                )}
-                {verification.department && (
-                  <div>
-                    <span className="text-muted-foreground">Department:</span>
-                    <p className="font-medium">{verification.department}</p>
-                  </div>
-                )}
-                {verification.email && (
-                  <div>
-                    <span className="text-muted-foreground">Email:</span>
-                    <p className="font-medium">{verification.email}</p>
-                  </div>
-                )}
-                <div>
-                  <span className="text-muted-foreground">Role:</span>
-                  <p className="font-medium capitalize">{verification.userRole}</p>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <h3 className="font-medium text-lg mb-2">Verification Information</h3>
-              <div className="space-y-2">
-                <div>
-                  <span className="text-muted-foreground">PIN Number:</span>
-                  <p className="font-medium">{verification.pinNumber}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Merchant ID:</span>
-                  <p className="font-medium text-xs break-all">{verification.merchantId}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        <div className="md:col-span-2">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="text-xl">API Response Data</CardTitle>
-              <CardDescription>
-                Raw data returned by the verification API
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted p-4 rounded-md overflow-auto max-h-[60vh]">
-                <pre className="text-xs whitespace-pre-wrap break-words text-muted-foreground">
-                  {formatJsonResponse(verification.response)}
-                </pre>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Verification #{verification.id}</CardTitle>
+                <CardDescription>
+                  Created on {new Date(verification.createdAt).toLocaleString()}
+                </CardDescription>
+                <div className="mt-2">
+                  <Badge 
+                    className={statusColor[verification.status]}
+                    variant="outline"
+                  >
+                    <div className="flex items-center gap-1">
+                      {statusIcon[verification.status]}
+                      <span className="capitalize">{verification.status}</span>
+                    </div>
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <h3 className="font-medium text-lg mb-2">User Information</h3>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-muted-foreground">Username:</span>
+                    <p className="font-medium">{verification.username}</p>
+                  </div>
+                  {verification.fullName && (
+                    <div>
+                      <span className="text-muted-foreground">Full Name:</span>
+                      <p className="font-medium">{verification.fullName}</p>
+                    </div>
+                  )}
+                  {verification.department && (
+                    <div>
+                      <span className="text-muted-foreground">Department:</span>
+                      <p className="font-medium">{verification.department}</p>
+                    </div>
+                  )}
+                  {verification.email && (
+                    <div>
+                      <span className="text-muted-foreground">Email:</span>
+                      <p className="font-medium">{verification.email}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">Role:</span>
+                    <p className="font-medium capitalize">{verification.userRole}</p>
+                  </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                <h3 className="font-medium text-lg mb-2">Verification Information</h3>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-muted-foreground">PIN Number:</span>
+                    <p className="font-medium">{verification.pinNumber}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Merchant ID:</span>
+                    <p className="font-medium text-xs break-all">{verification.merchantId}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-2">
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle className="text-xl">API Response Data</CardTitle>
+                <CardDescription>
+                  Raw data returned by the verification API
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted p-4 rounded-md overflow-auto max-h-[60vh]">
+                  <pre className="text-xs whitespace-pre-wrap break-words text-muted-foreground">
+                    {formatJsonResponse(verification.response)}
+                  </pre>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

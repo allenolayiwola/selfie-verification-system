@@ -514,7 +514,7 @@ export function registerRoutes(app: Express): Server {
         merchantId: merchantKey,
         pinNumber,
         imageData: "", // Store empty string instead of null
-        status: verificationStatus,
+        status: verificationStatus as "pending" | "approved" | "rejected", // Type assertion for proper status value
         response: JSON.stringify(responseData)
       }).returning();
 
