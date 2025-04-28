@@ -508,12 +508,12 @@ export function registerRoutes(app: Express): Server {
       
       console.log('Final verification status:', verificationStatus);
       
-      // Store verification metadata (without image data) in database
+      // Store verification metadata along with the image data in database
       const [verification] = await db.insert(verifications).values({
         userId: req.user.id,
         merchantId: merchantKey,
         pinNumber,
-        imageData: "", // Store empty string instead of null
+        imageData, // Store the actual image data
         status: verificationStatus as "pending" | "approved" | "rejected", // Type assertion for proper status value
         response: JSON.stringify(responseData)
       }).returning();
@@ -550,6 +550,7 @@ export function registerRoutes(app: Express): Server {
           userId: verifications.userId,
           merchantId: verifications.merchantId,
           pinNumber: verifications.pinNumber,
+          imageData: verifications.imageData,
           status: verifications.status,
           response: verifications.response,
           createdAt: verifications.createdAt,
