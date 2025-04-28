@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import express from "express";
 import { db } from "@db";
 import { users, verifications, insertUserSchema } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { fromZodError } from "zod-validation-error";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -508,15 +508,38 @@ export function registerRoutes(app: Express): Server {
       
       console.log('Final verification status:', verificationStatus);
       
+      // Log details about the image data
+      console.log('Image data details before storing in database:', {
+        imageDataType: typeof imageData,
+        imageDataPresent: !!imageData,
+        imageDataLength: imageData ? imageData.length : 0,
+        sampleStart: imageData ? imageData.substring(0, 30) + '...' : 'none'
+      });
+      
       // Store verification metadata along with the image data in database
-      const [verification] = await db.insert(verifications).values({
-        userId: req.user.id,
-        merchantId: merchantKey,
-        pinNumber,
-        imageData, // Store the actual image data
-        status: verificationStatus as "pending" | "approved" | "rejected", // Type assertion for proper status value
-        response: JSON.stringify(responseData)
-      }).returning();
+      try {
+        const [verification] = await db.insert(verifications).values({
+          userId: req.user.id,
+          merchantId: merchantKey,
+          pinNumber,
+          imageData, // Store the actual image data
+          status: verificationStatus as "pending" | "approved" | "rejected", // Type assertion for proper status value
+          response: JSON.stringify(responseData)
+        }).returning();
+        
+        console.log('Verification stored in database with ID:', verification.id);
+        // Log the stored image data length
+        const [storedVerification] = await db
+          .select({ imageDataLength: sql`length(${verifications.imageData})` })
+          .from(verifications)
+          .where(eq(verifications.id, verification.id))
+          .limit(1);
+        
+        console.log('Stored image data length:', storedVerification?.imageDataLength || 0);
+      } catch (dbError) {
+        console.error('Error storing verification data:', dbError);
+        throw dbError;
+      }
 
       if (!apiResponse.ok) {
         return res.status(apiResponse.status).json({
